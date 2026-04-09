@@ -1,0 +1,49 @@
+<div class="page-header">
+  <h2>Sipariş Yönetimi</h2>
+  <p class="text-muted text-sm">Toplam {{ totalElements() }} sipariş</p>
+</div>
+@if (loading()) {
+@for (i of [1,2,3]; track i) { <div class="skeleton"
+  style="height:56px;border-radius:var(--radius-md);margin-bottom:8px"></div> }
+} @else {
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Sipariş No</th>
+        <th>Kullanıcı</th>
+        <th>Tutar</th>
+        <th>Durum</th>
+        <th>Tarih</th>
+        <th>İşlem</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (o of orders(); track o.id) {
+      <tr>
+        <td class="text-mono text-sm">{{ o.orderNumber }}</td>
+        <td class="text-sm">{{ o.userName }}</td>
+        <td style="font-weight:600;font-size:13px">₺{{ o.totalAmount | number:'1.2-2' }}</td>
+        <td><span class="badge" [class]="statusBadge(o.status)">{{ statusLabel(o.status) }}</span></td>
+        <td class="text-dim text-xs">{{ o.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+        <td>
+          <select class="form-input" style="padding:4px 8px;font-size:12px;width:auto" [value]="o.status"
+            (change)="updateStatus(o, $event)">
+            <option value="PENDING">Bekliyor</option>
+            <option value="CONFIRMED">Onaylandı</option>
+            <option value="SHIPPED">Kargoda</option>
+            <option value="DELIVERED">Teslim Edildi</option>
+            <option value="CANCELLED">İptal</option>
+          </select>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
+<div class="pagination">
+  <button class="btn btn-ghost btn-sm" [disabled]="page()===0" (click)="goPage(page()-1)">← Önceki</button>
+  <span class="text-muted text-sm">Sayfa {{ page()+1 }} / {{ totalPages() }}</span>
+  <button class="btn btn-ghost btn-sm" [disabled]="page()>=totalPages()-1" (click)="goPage(page()+1)">Sonraki →</button>
+</div>
+}

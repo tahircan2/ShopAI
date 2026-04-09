@@ -1,0 +1,155 @@
+<div class="container" style="padding-top:88px;padding-bottom:60px">
+  <div class="page-header">
+    <div>
+      <h1>Ürünler</h1>
+      <p class="text-muted text-sm">{{ totalElements() }} ürün bulundu</p>
+    </div>
+    <!-- Sort -->
+    <div class="sort-wrap">
+      <select class="form-input" style="width:auto;min-width:180px" [(ngModel)]="sortBy"
+        (ngModelChange)="onSortChange()">
+        <option value="createdAt,desc">En Yeni</option>
+        <option value="price,asc">Fiyat: Düşükten Yükseğe</option>
+        <option value="price,desc">Fiyat: Yüksekten Düşüğe</option>
+        <option value="ratingAvg,desc">En Yüksek Puan</option>
+        <option value="ratingCount,desc">En Çok Değerlendirilen</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- AI Filter Banner -->
+  @if (productService.aiFilteredProducts()) {
+  <div class="ai-filter-banner">
+    <span>🤖 AI filtresi aktif</span>
+    <button class="btn btn-ghost btn-sm" (click)="clearAiFilter()">Filtreyi Kaldır</button>
+  </div>
+  }
+
+  <div class="layout">
+    <!-- Sidebar Filters -->
+    <aside class="sidebar" [class.open]="filterOpen()">
+      <div class="sidebar-header">
+        <h3>Filtreler</h3>
+        <button class="btn-icon" (click)="filterOpen.set(false)">✕</button>
+      </div>
+
+      <!-- Category -->
+      <div class="filter-group">
+        <div class="filter-title">Kategori</div>
+        @for (cat of categories(); track cat.id) {
+        <label class="filter-option">
+          <input type="radio" name="category" [value]="cat.slug" [(ngModel)]="filter.categorySlug" />
+          <span>{{ cat.name }}</span>
+        </label>
+        }
+        @if (filter.categorySlug) {
+        <button class="btn-link" (click)="filter.categorySlug = undefined; applyFilters()">Temizle</button>
+        }
+      </div>
+
+      <!-- Price Range -->
+      <div class="filter-group">
+        <div class="filter-title">Fiyat Aralığı</div>
+        <div class="price-inputs">
+          <input type="number" class="form-input" placeholder="Min ₺" [(ngModel)]="filter.minPrice" />
+          <span class="text-dim">—</span>
+          <input type="number" class="form-input" placeholder="Max ₺" [(ngModel)]="filter.maxPrice" />
+        </div>
+      </div>
+
+      <!-- Min Rating -->
+      <div class="filter-group">
+        <div class="filter-title">Minimum Puan</div>
+        @for (r of [4,3,2,1]; track r) {
+        <label class="filter-option">
+          <input type="radio" name="rating" [value]="r" [(ngModel)]="filter.rating" />
+          <span>{{ '★'.repeat(r) }} ve üzeri</span>
+        </label>
+        }
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-primary btn-full btn-sm" (click)="applyFilters(); filterOpen.set(false)">Filtreleri Uygula</button>
+      </div>
+      <button class="btn btn-ghost btn-full btn-sm" style="margin-top:8px" (click)="clearFilters(); filterOpen.set(false)">Tüm Filtreleri Temizle</button>
+    </aside>
+
+    <!-- Products -->
+    <div class="products-area">
+      <!-- Mobile filter button -->
+      <button class="btn btn-ghost btn-sm filter-toggle" (click)="filterOpen.set(true)">
+        ⚙️ Filtrele
+      </button>
+
+      @if (loading()) {
+      <div class="products-grid">
+        @for (i of [1,2,3,4,5,6,8,9]; track i) {
+        <div>
+          <div class="skeleton" style="height:220px;border-radius:var(--radius-lg)"></div>
+          <div class="skeleton" style="height:16px;margin-top:12px;width:80%"></div>
+          <div class="skeleton" style="height:14px;margin-top:8px;width:50%"></div>
+        </div>
+        }
+      </div>
+      } @else if (displayProducts().length === 0) {
+      <div class="empty-state">
+        <div style="font-size:48px;margin-bottom:16px">🔍</div>
+        <h3>Ürün Bulunamadı</h3>
+        <p class="text-muted">Filtrelerinizi değiştirerek tekrar deneyin.</p>
+        <button class="btn btn-primary" style="margin-top:16px" (click)="clearFilters()">Filtreleri Temizle</button>
+      </div>
+      } @else {
+      <div class="products-grid">
+        @for (p of displayProducts(); track p.id) {
+        <div class="product-card">
+          <a [routerLink]="['/products', p.slug]" class="product-card-link">
+            <div class="product-img-wrap">
+              @if (p.primaryImageUrl) {
+              <img [src]="p.primaryImageUrl" [alt]="p.name" class="product-img" loading="lazy" />
+              } @else {
+              <div class="product-img-placeholder">📦</div>
+              }
+              @if (p.discountedPrice) {
+              <div class="discount-badge">-{{ discountPct(p) }}%</div>
+              }
+              @if (p.stockQuantity === 0) {
+              <div class="out-of-stock-overlay">Stok Tükendi</div>
+              }
+            </div>
+            <div class="product-info">
+              @if (p.brand) { <span class="product-brand">{{ p.brand }}</span> }
+              <h4 class="product-name">{{ p.name }}</h4>
+              <div class="product-rating">
+                <span>{{ '★'.repeat(Math.floor(p.ratingAvg)) }}</span>
+                <span class="text-dim text-xs">({{ p.ratingCount }})</span>
+              </div>
+              <div class="product-price">
+                @if (p.discountedPrice) {
+                <span class="price-new">{{ p.discountedPrice | currencyFormat }}</span>
+                <span class="price-old">{{ p.price | currencyFormat }}</span>
+                } @else {
+                <span class="price-new">{{ p.price | currencyFormat }}</span>
+                }
+              </div>
+            </div>
+          </a>
+          <div class="product-card-actions">
+            <button class="btn btn-primary" style="width:100%" (click)="addToCart(p, $event)"
+              [disabled]="p.stockQuantity === 0">
+              Sepete Ekle
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+
+      <!-- Pagination -->
+      <app-pagination
+        [totalPages]="totalPages()"
+        [currentPage]="currentPage()"
+        (pageChange)="goPage($event)">
+      </app-pagination>
+      }
+    </div>
+  </div>
+</div>

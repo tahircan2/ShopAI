@@ -1,0 +1,48 @@
+<div class="container" style="padding-top:88px;padding-bottom:60px">
+  <h1 style="margin-bottom:28px">Favorilerim</h1>
+  @if (loading()) {
+  <div class="grid-4">
+    @for (i of [1,2,3,4]; track i) {
+    <div class="skeleton" style="height:280px;border-radius:var(--radius-lg)"></div>
+    }
+  </div>
+  } @else if (items().length === 0) {
+  <div class="empty-state" style="text-align:center;padding:60px 20px">
+    <div style="font-size:48px;margin-bottom:16px">❤️</div>
+    <h3>Favori Listeniz Boş</h3>
+    <a routerLink="/products" class="btn btn-primary" style="margin-top:16px">Ürünleri Keşfet</a>
+  </div>
+  } @else {
+  <div class="grid-4">
+    @for (item of items(); track item.id) {
+    <div class="wish-card">
+      <a [routerLink]="['/products', item.slug]" class="wish-card-link">
+        <div class="wish-img">
+          @if (item.primaryImageUrl) {
+          <img [src]="item.primaryImageUrl" [alt]="item.name" />
+          } @else {
+          <div class="img-ph">📦</div>
+          }
+        </div>
+        <div class="wish-info">
+          <div class="product-name">{{ item.name }}</div>
+          <div class="product-price">{{ (item.discountedPrice ?? item.price) | currencyFormat }}</div>
+        </div>
+      </a>
+      <button class="remove-btn" (click)="removeFromWishlist(item.id)" title="Favoriden Çıkar">✕</button>
+      
+      <div class="wish-actions">
+        <button class="btn btn-primary btn-full btn-sm" 
+                (click)="addToCart(item)"
+                [disabled]="updatingCart() === item.id || item.stockQuantity === 0">
+          @if (updatingCart() === item.id) {
+            <span class="spinner" style="width:14px;height:14px;border-width:2px;margin-right:6px"></span>
+          }
+          {{ item.stockQuantity === 0 ? 'Stokta Yok' : 'Sepete Ekle' }}
+        </button>
+      </div>
+    </div>
+    }
+  </div>
+  }
+</div>

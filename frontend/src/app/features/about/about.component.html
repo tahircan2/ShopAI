@@ -1,0 +1,110 @@
+<div class="about-page">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">Hakkımızda</div>
+      <h1 class="hero-title">Alışverişi Yeniden<br><span class="gradient-text">Tanımlıyoruz</span></h1>
+      <p class="hero-desc">ShopAI, yapay zeka destekli e-ticaret platformuyla müşterilerin doğru ürüne en hızlı şekilde ulaşmasını sağlıyor. 2020'den bu yana binlerce müşteriye hizmet veriyoruz.</p>
+      <div class="hero-actions">
+        <a routerLink="/products" class="btn btn-primary btn-lg">Keşfetmeye Başla</a>
+        <a routerLink="/contact" class="btn btn-ghost btn-lg">İletişime Geç</a>
+      </div>
+    </div>
+    <div class="hero-glow"></div>
+  </section>
+
+  <!-- Stats -->
+  <section class="stats-section">
+    <div class="container">
+      <div class="stats-grid">
+        @for (stat of stats; track stat.value) {
+        <div class="stat-card">
+          <div class="stat-value">{{ stat.value }}</div>
+          <div class="stat-label">{{ stat.label }}</div>
+        </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Mission -->
+  <section class="mission-section">
+    <div class="container">
+      <div class="mission-grid">
+        <div class="mission-text">
+          <div class="section-badge">Misyonumuz</div>
+          <h2>Teknoloji ile<br>Alışverişi Kolaylaştırıyoruz</h2>
+          <p class="text-muted">Doğal dil işleme ve makine öğrenmesi teknolojilerini kullanarak her kullanıcıya özel alışveriş deneyimi sunuyoruz. "Kırmızı spor ayakkabı 500₺ altı" gibi günlük konuşma dilinde arama yapabilirsiniz.</p>
+          <p class="text-muted" style="margin-top:12px">Güvenlik konusundaki kararlılığımız doğrultusunda, kullanıcı verilerini asla üçüncü şahıslarla paylaşmıyoruz ve HttpOnly cookie tabanlı JWT sistemiyle verilerinizi koruyoruz.</p>
+        </div>
+        <div class="mission-visual">
+          <div class="visual-card">
+            <div class="visual-icon">🤖</div>
+            <div class="visual-title">AI Asistan</div>
+            <div class="visual-desc text-muted text-sm">Doğal dille ürün arama ve kişiselleştirilmiş öneriler</div>
+          </div>
+          <div class="visual-card accent">
+            <div class="visual-icon">⚡</div>
+            <div class="visual-title">Anlık Sonuçlar</div>
+            <div class="visual-desc text-muted text-sm">Milisaniyeler içinde binlerce ürün arasından filtreleme</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Values -->
+  <section class="values-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-badge">Değerlerimiz</div>
+        <h2>Bizi Biz Yapan İlkeler</h2>
+      </div>
+      <div class="values-grid">
+        @for (v of values; track v.title) {
+        <div class="value-card">
+          <div class="value-icon">{{ v.icon }}</div>
+          <h4>{{ v.title }}</h4>
+          <p class="text-muted text-sm">{{ v.desc }}</p>
+        </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Team -->
+  <section class="team-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-badge">Ekibimiz</div>
+        <h2>Arkasındaki İnsanlar</h2>
+      </div>
+      <div class="team-grid">
+        @for (member of team; track member.name) {
+        <div class="team-card">
+          <div class="member-avatar" [style.background]="member.color + '22'" [style.border-color]="member.color + '44'">
+            <span [style.color]="member.color">{{ member.avatar }}</span>
+          </div>
+          <h4 class="member-name">{{ member.name }}</h4>
+          <div class="member-role text-muted text-sm">{{ member.role }}</div>
+        </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="container">
+      <div class="cta-card">
+        <h2>Alışverişe Başlamaya Hazır mısınız?</h2>
+        <p class="text-muted">Binlerce ürün ve AI destekli arama ile hayalinizdeki ürünü kolayca bulun.</p>
+        <div class="cta-actions">
+          <a routerLink="/products" class="btn btn-primary btn-lg">Ürünleri Keşfet</a>
+          <a routerLink="/auth/register" class="btn btn-ghost btn-lg">Ücretsiz Kayıt Ol</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

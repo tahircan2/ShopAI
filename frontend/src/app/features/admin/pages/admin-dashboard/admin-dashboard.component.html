@@ -1,0 +1,69 @@
+<div class="page-header">
+  <h2>Dashboard</h2>
+  <p class="text-muted text-sm">Genel sistem istatistikleri</p>
+</div>
+
+@if (loading()) {
+  <div class="stats-grid">
+    @for (i of [1,2,3,4,5,6]; track i) {
+      <div class="skeleton" style="height:90px;border-radius:var(--radius-lg)"></div>
+    }
+  </div>
+} @else {
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">👥</div>
+      <div class="stat-body">
+        <div class="stat-label">Toplam Kullanıcı</div>
+        <div class="stat-value">{{ stats()?.totalUsers | number }}</div>
+        <div class="stat-sub text-success">+{{ stats()?.newUsersThisMonth }} bu ay</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">📦</div>
+      <div class="stat-body">
+        <div class="stat-label">Toplam Ürün</div>
+        <div class="stat-value">{{ stats()?.totalProducts | number }}</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🛒</div>
+      <div class="stat-body">
+        <div class="stat-label">Toplam Sipariş</div>
+        <div class="stat-value">{{ stats()?.totalOrders | number }}</div>
+      </div>
+    </div>
+    <div class="stat-card warning">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-body">
+        <div class="stat-label">Bekleyen Sipariş</div>
+        <div class="stat-value">{{ stats()?.pendingOrders | number }}</div>
+      </div>
+    </div>
+    <div class="stat-card success">
+      <div class="stat-icon">💰</div>
+      <div class="stat-body">
+        <div class="stat-label">Toplam Gelir</div>
+        <div class="stat-value">₺{{ stats()?.totalRevenue?.toFixed(0) | number }}</div>
+      </div>
+    </div>
+  </div>
+}
+
+<div class="quick-actions">
+  <h3>Hızlı İşlemler</h3>
+  <div class="action-cards">
+    <a class="action-card" routerLink="/admin/products">
+      <span>📦</span> Ürün Ekle
+    </a>
+    <a class="action-card" routerLink="/admin/orders">
+      <span>🛒</span> Siparişleri Yönet
+    </a>
+    <a class="action-card" routerLink="/admin/users">
+      <span>👥</span> Kullanıcıları Gör
+    </a>
+    <a class="action-card" routerLink="/admin/coupons">
+      <span>🎫</span> Kupon Oluştur
+    </a>
+  </div>
+</div>

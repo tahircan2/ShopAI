@@ -1,0 +1,96 @@
+@if (environment.aiEnabled) {
+  <!-- Floating Toggle Button -->
+  <button class="chat-toggle" (click)="toggleOpen()" [class.has-messages]="aiChat.messages().length > 0">
+    @if (open()) {
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M18 6 6 18M6 6l12 12"/>
+      </svg>
+    } @else {
+      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      @if (aiChat.messages().length > 0) {
+        <span class="unread-dot"></span>
+      }
+    }
+  </button>
+
+  <!-- Chat Panel -->
+  @if (open()) {
+    <div class="chat-panel">
+      <!-- Header -->
+      <div class="chat-header">
+        <div class="chat-avatar">AI</div>
+        <div>
+          <div class="chat-name">ShopAI Asistan</div>
+          <div class="chat-status">
+            <span class="status-dot" [class.typing]="aiChat.isTyping()"></span>
+            {{ aiChat.isTyping() ? 'Yazıyor...' : 'Aktif' }}
+          </div>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="chat-action-btn" (click)="clearChat()" title="Sohbeti Temizle">🗑️</button>
+          <button class="chat-action-btn" (click)="open.set(false)">✕</button>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="chat-messages" #msgContainer>
+        @if (aiChat.messages().length === 0) {
+          <div class="welcome-msg">
+            <div class="welcome-icon">🤖</div>
+            <div class="welcome-text">
+              <strong>Merhaba!</strong> Size nasıl yardımcı olabilirim?
+            </div>
+            <div class="quick-actions">
+              @for (q of quickQuestions; track q) {
+                <button class="quick-btn" (click)="sendQuick(q)">{{ q }}</button>
+              }
+            </div>
+          </div>
+        }
+
+        @for (msg of aiChat.messages(); track msg.id) {
+          <div class="msg" [class.user]="msg.role === 'user'" [class.bot]="msg.role === 'assistant'">
+            @if (msg.role === 'assistant') {
+              <div class="bot-avatar">AI</div>
+            }
+            <div class="msg-bubble" [class.injection-warn]="msg.isInjectionDetected">
+              @if (msg.isInjectionDetected) {
+                <div class="warn-badge">⚠️ Güvenlik uyarısı</div>
+              }
+              {{ msg.content }}
+            </div>
+          </div>
+        }
+
+        @if (aiChat.isTyping()) {
+          <div class="msg bot">
+            <div class="bot-avatar">AI</div>
+            <div class="msg-bubble typing-bubble">
+              <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Input -->
+      <div class="chat-input-wrap">
+        <input
+          type="text"
+          class="chat-input"
+          [(ngModel)]="inputText"
+          (keydown.enter)="send()"
+          placeholder="Mesaj yazın..."
+          [disabled]="aiChat.isTyping()"
+          maxlength="500"
+        />
+        <button class="send-btn" (click)="send()" [disabled]="!inputText.trim() || aiChat.isTyping()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  }
+}

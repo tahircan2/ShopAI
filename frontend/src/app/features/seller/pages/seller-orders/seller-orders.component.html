@@ -1,0 +1,38 @@
+<div class="page-header">
+  <h2>Siparişlerim</h2>
+</div>
+
+@if (loading()) {
+@for (i of [1,2,3]; track i) {
+<div class="skeleton" style="height:56px;border-radius:var(--radius-md);margin-bottom:8px"></div>
+}
+} @else if (orders().length === 0) {
+<div class="empty-state">
+  <p class="text-muted">Henüz sipariş alınmadı.</p>
+</div>
+} @else {
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Sipariş No</th>
+        <th>Müşteri</th>
+        <th>Tutar</th>
+        <th>Durum</th>
+        <th>Tarih</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (o of orders(); track o.id) {
+      <tr>
+        <td class="text-mono text-sm">{{ o.orderNumber }}</td>
+        <td class="text-sm">{{ o.userName }}</td>
+        <td style="font-weight:600;font-size:13px">₺{{ o.totalAmount | number:'1.2-2' }}</td>
+        <td><span class="badge" [class]="statusBadge(o.status)">{{ statusLabel(o.status) }}</span></td>
+        <td class="text-dim text-xs">{{ o.createdAt | date:'dd.MM.yyyy' }}</td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
+}

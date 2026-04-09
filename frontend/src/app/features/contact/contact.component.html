@@ -1,0 +1,98 @@
+<div class="contact-page container">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div class="section-badge">İletişim</div>
+    <h1>Bize Ulaşın</h1>
+    <p class="text-muted">Sorularınız, önerileriniz veya şikayetleriniz için aşağıdaki formu doldurun ya da iletişim bilgilerimizi kullanın.</p>
+  </div>
+
+  <div class="contact-grid">
+
+    <!-- Form -->
+    <div class="form-card">
+      @if (sent()) {
+      <div class="sent-state">
+        <div class="sent-icon">✅</div>
+        <h3>Mesajınız Gönderildi!</h3>
+        <p class="text-muted">En kısa sürede size dönüş yapacağız. Teşekkürler!</p>
+        <button class="btn btn-ghost" style="margin-top:20px" (click)="sent.set(false)">Yeni Mesaj Gönder</button>
+      </div>
+      } @else {
+      <form [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ad Soyad *</label>
+            <input formControlName="name" type="text" class="form-input" [class.error]="showError('name')" placeholder="Adınız Soyadınız" />
+            @if (showError('name')) { <span class="form-error">Bu alan zorunludur.</span> }
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-posta *</label>
+            <input formControlName="email" type="email" class="form-input" [class.error]="showError('email')" placeholder="ornek&#64;mail.com" />
+            @if (showError('email')) { <span class="form-error">Geçerli bir e-posta girin.</span> }
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">Konu *</label>
+          <input formControlName="subject" type="text" class="form-input" [class.error]="showError('subject')" placeholder="Mesajınızın konusu" />
+          @if (showError('subject')) { <span class="form-error">Bu alan zorunludur.</span> }
+        </div>
+        <div class="form-group" style="margin-top:16px">
+          <label class="form-label">Mesaj *</label>
+          <textarea formControlName="message" class="form-input form-textarea" [class.error]="showError('message')" placeholder="Mesajınızı buraya yazın... (en az 20 karakter)" rows="6"></textarea>
+          @if (showError('message')) { <span class="form-error">Mesaj en az 20 karakter olmalıdır.</span> }
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top:20px" [disabled]="loading()">
+          @if (loading()) { <span class="spinner"></span> }
+          Mesaj Gönder
+        </button>
+      </form>
+      }
+    </div>
+
+    <!-- Info -->
+    <div class="info-col">
+
+      <div class="info-card">
+        <h4>İletişim Bilgileri</h4>
+        <div class="contact-items">
+          @for (item of contactInfo; track item.label) {
+          <div class="contact-item">
+            <div class="contact-icon">{{ item.icon }}</div>
+            <div>
+              <div class="contact-label text-xs text-dim">{{ item.label }}</div>
+              <div class="contact-value text-sm">{{ item.value }}</div>
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+
+      <div class="info-card">
+        <h4>E-posta Adresimiz</h4>
+        <div class="email-item">
+          <span class="text-sm text-muted">Genel:</span>
+          <span class="text-sm text-primary">info&#64;shopai.com</span>
+        </div>
+        <div class="email-item">
+          <span class="text-sm text-muted">Destek:</span>
+          <span class="text-sm text-primary">destek&#64;shopai.com</span>
+        </div>
+        <div class="email-item">
+          <span class="text-sm text-muted">Satıcı:</span>
+          <span class="text-sm text-primary">satici&#64;shopai.com</span>
+        </div>
+      </div>
+
+      <div class="info-card social-card">
+        <h4>Sosyal Medya</h4>
+        <div class="social-links">
+          <a href="#" class="social-link" title="Twitter/X">𝕏 Twitter</a>
+          <a href="#" class="social-link" title="Instagram">📷 Instagram</a>
+          <a href="#" class="social-link" title="LinkedIn">in LinkedIn</a>
+          <a href="#" class="social-link" title="YouTube">▶ YouTube</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

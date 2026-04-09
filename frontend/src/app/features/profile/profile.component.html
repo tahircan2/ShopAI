@@ -1,0 +1,197 @@
+<div class="container" style="padding-top:88px;padding-bottom:60px;max-width:900px">
+  <!-- Header -->
+  <div class="profile-header">
+    <div class="avatar-lg">{{ initials() }}</div>
+    <div>
+      <h1>{{ auth.userFullName() }}</h1>
+      <p class="text-muted">{{ auth.currentUser()?.email }}</p>
+      <span class="badge" [class]="roleBadge()">{{ roleLabel() }}</span>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    @for (t of tabList; track t.key) {
+    <button class="tab" [class.active]="activeTab() === t.key" (click)="activeTab.set(t.key)">
+      {{ t.icon }} {{ t.label }}
+    </button>
+    }
+  </div>
+
+  <!-- Profile Tab -->
+  @if (activeTab() === 'profile') {
+  <div class="tab-panel fade-in">
+    <h3>Profil Bilgileri</h3>
+    <form [formGroup]="profileForm" (ngSubmit)="updateProfile()">
+      <div class="grid-2" style="gap:16px">
+        <div class="form-group">
+          <label class="form-label">Ad</label>
+          <input formControlName="firstName" type="text" class="form-input" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Soyad</label>
+          <input formControlName="lastName" type="text" class="form-input" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">E-posta</label>
+        <input type="email" class="form-input" [value]="auth.currentUser()?.email" disabled />
+        <span class="form-hint">E-posta değiştirilemez.</span>
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Telefon</label>
+        <input formControlName="phone" type="tel" class="form-input" placeholder="+90 5XX XXX XX XX" />
+      </div>
+      <button type="submit" class="btn btn-primary" style="margin-top:20px" [disabled]="savingProfile()">
+        @if (savingProfile()) { <span class="spinner"></span> }
+        Kaydet
+      </button>
+    </form>
+  </div>
+  }
+
+  <!-- Orders Tab -->
+  @if (activeTab() === 'orders') {
+  <div class="tab-panel fade-in">
+    <h3>Siparişlerim</h3>
+    @if (loadingOrders()) {
+    @for (i of [1,2,3]; track i) {
+    <div class="skeleton" style="height:80px;border-radius:var(--radius-md);margin-bottom:10px"></div>
+    }
+    } @else if (orders().length === 0) {
+    <div class="empty-state">
+      <p class="text-muted">Henüz siparişiniz yok.</p>
+    </div>
+    } @else {
+    @for (order of orders(); track order.id) {
+    <div class="order-row">
+      <div>
+        <div class="order-num">{{ order.orderNumber }}</div>
+        <div class="text-dim text-xs">{{ order.createdAt | date:'dd.MM.yyyy' }}</div>
+      </div>
+      <div class="text-sm text-muted">{{ order.itemCount }} ürün</div>
+      <span class="badge" [class]="statusBadge(order.status)">{{ statusLabel(order.status) }}</span>
+      <div class="text-sm font-mono" style="font-weight:600">₺{{ order.totalAmount | number:'1.2-2' }}</div>
+    </div>
+    }
+    }
+  </div>
+  }
+
+  <!-- Addresses Tab -->
+  @if (activeTab() === 'addresses') {
+  <div class="tab-panel fade-in">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h3>Adreslerim</h3>
+      <button class="btn btn-ghost btn-sm" (click)="toggleAddressForm()">
+        {{ showAddressForm() ? '✕ İptal' : '+ Yeni Adres' }}
+      </button>
+    </div>
+
+    @if (showAddressForm()) {
+    <form [formGroup]="addressForm" (ngSubmit)="saveAddress()" class="address-form">
+      <div class="grid-2" style="gap:12px">
+        <div class="form-group">
+          <label class="form-label">Ad Soyad</label>
+          <input formControlName="fullName" type="text" class="form-input" [class.error]="showErr('fullName')" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Etiket <span class="text-dim">(ör. Ev)</span></label>
+          <input formControlName="label" type="text" class="form-input" placeholder="Ev, İş..." />
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label">Adres</label>
+        <input formControlName="addressLine1" type="text" class="form-input" [class.error]="showErr('addressLine1')" />
+      </div>
+      <div class="grid-2" style="gap:12px;margin-top:12px">
+        <div class="form-group">
+          <label class="form-label">Şehir</label>
+          <input formControlName="city" type="text" class="form-input" [class.error]="showErr('city')" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Posta Kodu</label>
+          <input formControlName="postalCode" type="text" class="form-input" />
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label form-label--checkbox">
+          <input formControlName="isDefault" type="checkbox" />
+          Varsayılan adres olarak ayarla
+        </label>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm" style="margin-top:16px" [disabled]="savingAddress()">
+        @if (savingAddress()) { <span class="spinner"></span> }
+        Adresi Kaydet
+      </button>
+    </form>
+    }
+
+    @for (addr of addresses(); track addr.id) {
+    <div class="address-card">
+      <div>
+        <div class="addr-name">{{ addr.fullName }} @if (addr.label) { <span class="text-dim text-xs">({{ addr.label
+            }})</span> }</div>
+        <div class="text-muted text-sm">{{ addr.addressLine1 }}, {{ addr.city }}</div>
+        @if (addr.isDefault) { <span class="badge badge-primary" style="margin-top:4px">Varsayılan</span> }
+      </div>
+      <button class="btn btn-danger btn-sm" (click)="deleteAddress(addr.id)">Sil</button>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Reviews Tab -->
+  @if (activeTab() === 'reviews') {
+  <div class="tab-panel fade-in">
+    <h3>Yorumlarım</h3>
+    @if (loadingReviews()) {
+    @for (i of [1,2,3]; track i) {
+    <div class="skeleton" style="height:100px;border-radius:var(--radius-md);margin-bottom:10px"></div>
+    }
+    } @else if (reviews().length === 0) {
+    <div class="empty-state">
+      <p class="text-muted">Henüz hiç değerlendirme yapmadınız.</p>
+    </div>
+    } @else {
+    @for (review of reviews(); track review.id) {
+    <div class="review-card" style="padding:16px; border:1px solid var(--border-color); border-radius:var(--radius-md); margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+        <div style="font-weight:600; font-size:1.1rem;">{{ review.productName }}</div>
+        <div class="text-muted text-sm">{{ review.createdAt | date:'dd.MM.yyyy' }}</div>
+      </div>
+      <div style="color:var(--color-warning); font-size:1.2rem; margin-bottom:8px;">
+        {{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5 - review.rating) }}
+      </div>
+      @if (review.title) {
+        <h4 style="margin-bottom:4px; font-weight:600;">{{ review.title }}</h4>
+      }
+      <p class="text-muted text-sm" style="margin-bottom:0;">{{ review.comment }}</p>
+    </div>
+    }
+    }
+  </div>
+  }
+
+  <!-- Security Tab -->
+  @if (activeTab() === 'security') {
+  <div class="tab-panel fade-in">
+    <h3>Güvenlik</h3>
+    <form [formGroup]="passwordForm" (ngSubmit)="changePassword()">
+      <div class="form-group">
+        <label class="form-label">Mevcut Şifre</label>
+        <input formControlName="currentPassword" type="password" class="form-input" />
+      </div>
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label">Yeni Şifre</label>
+        <input formControlName="newPassword" type="password" class="form-input" placeholder="En az 8 karakter" />
+      </div>
+      @if (pwError()) { <div class="server-error" style="margin-top:12px">{{ pwError() }}</div> }
+      <button type="submit" class="btn btn-primary" style="margin-top:20px" [disabled]="changingPw()">
+        @if (changingPw()) { <span class="spinner"></span> }
+        Şifreyi Güncelle
+      </button>
+    </form>
+  </div>
+  }
+</div>

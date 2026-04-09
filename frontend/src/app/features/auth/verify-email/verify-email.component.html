@@ -1,0 +1,107 @@
+<div class="verify-email-page">
+
+  <!-- ── PENDING: Kayıt sonrası "e-postanızı kontrol edin" ekranı ── -->
+  @if (status() === 'pending') {
+    <div class="verify-card">
+      <div class="icon-pulse">
+        <div class="icon-circle">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" stroke-width="1.8"/>
+            <path d="M2 8l10 6 10-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
+
+      <h1>E-postanızı Kontrol Edin</h1>
+      <p class="subtitle">
+        Hesabınızı doğrulamak için
+        @if (email()) {
+          <strong>{{ email() }}</strong>
+        } @else {
+          e-posta adresinize
+        }
+        bir doğrulama bağlantısı gönderdik.
+      </p>
+
+      <div class="info-box">
+        <div class="info-step">
+          <span class="step-number">1</span>
+          <span>E-posta gelen kutunuzu açın</span>
+        </div>
+        <div class="info-step">
+          <span class="step-number">2</span>
+          <span><strong>ShopAI - E-posta Doğrulama</strong> konulu e-postayı bulun</span>
+        </div>
+        <div class="info-step">
+          <span class="step-number">3</span>
+          <span>E-postadaki <strong>"Hesabımı Doğrula"</strong> bağlantısına tıklayın</span>
+        </div>
+      </div>
+
+      <div class="spam-note">
+        📁 E-posta gelmediyse <strong>spam/önemsiz</strong> klasörünü kontrol edin.
+      </div>
+
+      <div class="resend-section">
+        <p class="resend-label">Hâlâ gelmediyse:</p>
+        <button
+          class="btn-resend"
+          [disabled]="resendCountdown() > 0 || resendLoading()"
+          (click)="resendEmail()">
+          @if (resendLoading()) {
+            <span class="btn-spinner"></span>
+            Gönderiliyor...
+          } @else if (resendCountdown() > 0) {
+            {{ resendCountdown() }}s sonra tekrar gönder
+          } @else {
+            Tekrar Gönder
+          }
+        </button>
+      </div>
+
+      <a routerLink="/auth/login" class="link-back">← Giriş sayfasına dön</a>
+    </div>
+  }
+
+  <!-- ── LOADING: Token doğrulanıyor ── -->
+  @if (status() === 'loading') {
+    <div class="verify-card centered">
+      <div class="loading-ring"></div>
+      <h2>Doğrulanıyor...</h2>
+      <p class="subtitle">E-posta adresiniz doğrulanıyor, lütfen bekleyin.</p>
+    </div>
+  }
+
+  <!-- ── SUCCESS: Başarılı doğrulama ── -->
+  @if (status() === 'success') {
+    <div class="verify-card centered">
+      <div class="success-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M7.5 12l3 3 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1>E-posta Doğrulandı! 🎉</h1>
+      <p class="subtitle">Hesabınız başarıyla aktifleştirildi. Artık giriş yapabilirsiniz.</p>
+      <a routerLink="/auth/login" class="btn-primary">Giriş Yap →</a>
+    </div>
+  }
+
+  <!-- ── ERROR: Geçersiz / süresi dolmuş token ── -->
+  @if (status() === 'error') {
+    <div class="verify-card centered">
+      <div class="error-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>Doğrulama Başarısız</h1>
+      <p class="subtitle">Bağlantı geçersiz veya süresi dolmuş (24 saat).</p>
+      <div class="error-actions">
+        <a routerLink="/auth/login" class="btn-ghost">Giriş Sayfasına Dön</a>
+      </div>
+    </div>
+  }
+
+</div>

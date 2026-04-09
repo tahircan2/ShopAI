@@ -1,0 +1,93 @@
+<div class="auth-layout">
+  <div class="auth-deco">
+    <div class="deco-content">
+      <div class="deco-logo">✦ ShopAI</div>
+      <h2>Alışverişin<br/><span class="highlight">zekâyla</span><br/>buluştuğu yer.</h2>
+      <p>AI destekli kişiselleştirilmiş alışveriş deneyimi sizi bekliyor.</p>
+      <div class="deco-features">
+        <div class="deco-feat"><span>✓</span> Kişisel AI asistanı</div>
+        <div class="deco-feat"><span>✓</span> Akıllı ürün önerileri</div>
+        <div class="deco-feat"><span>✓</span> Güvenli ödeme sistemi</div>
+      </div>
+    </div>
+    <div class="deco-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>Hoş Geldiniz</h1>
+        <p>Hesabınıza giriş yapın</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <div class="form-group">
+          <label class="form-label">E-posta</label>
+          <input
+            formControlName="email"
+            type="email"
+            class="form-input"
+            [class.error]="showError('email')"
+            placeholder="ornek@email.com"
+            autocomplete="email"
+          />
+          @if (showError('email')) {
+            <span class="form-error">{{ getError('email') }}</span>
+          }
+        </div>
+
+        <div class="form-group" style="margin-top: 16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <label class="form-label">Şifre</label>
+            <a routerLink="/auth/forgot-password" class="forgot-link">Şifremi unuttum</a>
+          </div>
+          <div class="input-wrap">
+            <input
+              formControlName="password"
+              [type]="showPassword() ? 'text' : 'password'"
+              class="form-input"
+              [class.error]="showError('password')"
+              placeholder="••••••••"
+              autocomplete="current-password"
+            />
+            <button type="button" class="eye-btn" (click)="toggleShowPassword()">
+              {{ showPassword() ? '👁' : '👁‍🗨' }}
+            </button>
+          </div>
+          @if (showError('password')) {
+            <span class="form-error">{{ getError('password') }}</span>
+          }
+        </div>
+
+        @if (serverError()) {
+          <div class="server-error">{{ serverError() }}</div>
+        }
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-full btn-lg"
+          style="margin-top: 24px"
+          [disabled]="loading()"
+        >
+          @if (loading()) { <span class="spinner"></span> }
+          Giriş Yap
+        </button>
+      </form>
+
+      <div class="auth-divider"><span>veya</span></div>
+
+      <div class="register-links">
+        <p>Hesabınız yok mu?
+          <a routerLink="/auth/register">Kayıt Olun</a>
+        </p>
+        <p>Satıcı olmak ister misiniz?
+          <a routerLink="/auth/register" [queryParams]="{role:'SELLER'}">Satıcı Hesabı Açın</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>

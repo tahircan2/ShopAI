@@ -1,0 +1,27 @@
+<div class="page-header">
+  <h2>Audit Loglar</h2>
+</div>
+
+@if (loading()) {
+  @for (i of [1,2,3,4,5]; track i) {
+    <div class="skeleton" style="height:44px;border-radius:var(--radius-md);margin-bottom:8px"></div>
+  }
+} @else {
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr><th>ID</th><th>Aksiyon</th><th>Kullanıcı</th><th>Entity</th><th>IP</th><th>Tarih</th></tr></thead>
+      <tbody>
+        @for (log of logs(); track log.id) {
+          <tr>
+            <td class="text-dim text-xs">#{{ log.id }}</td>
+            <td><span class="badge" [class]="actionBadge(log.action)">{{ log.action }}</span></td>
+            <td class="text-sm text-muted">{{ log.userId ?? 'Anonim' }}</td>
+            <td class="text-xs text-dim">{{ log.entityType }} {{ log.entityId ? '#'+log.entityId : '' }}</td>
+            <td class="text-xs text-dim">{{ log.ipAddress }}</td>
+            <td class="text-xs text-dim">{{ log.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

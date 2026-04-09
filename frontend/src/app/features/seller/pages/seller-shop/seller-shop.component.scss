@@ -1,0 +1,30 @@
+.page-header {
+  margin-bottom: 20px;
+
+  h2 {
+    font-size: 1.5rem;
+  }
+}
+
+.settings-card {
+  background: var(--clr-surface);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  max-width: 500px;
+
+  h3 {
+    font-size: 15px;
+    margin-bottom: 20px;
+  }
+}
+
+.success-msg {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--clr-success);
+  font-size: 13px;
+}

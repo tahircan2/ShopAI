@@ -1,0 +1,76 @@
+<div class="page-header">
+  <h2>Kullanıcı Yönetimi</h2>
+  <p class="text-muted text-sm">Toplam {{ totalElements() }} kullanıcı</p>
+</div>
+
+<div class="toolbar">
+  <input type="text" class="form-input" placeholder="Kullanıcı ara... Enter'a bas" [(ngModel)]="searchTerm" (keyup.enter)="load()" style="max-width:280px" />
+  <select class="form-input" [(ngModel)]="roleFilter" (ngModelChange)="load()" style="width:auto">
+    <option value="">Tüm Roller</option>
+    <option value="USER">Kullanıcı</option>
+    <option value="SELLER">Satıcı</option>
+    <option value="ADMIN">Admin</option>
+  </select>
+</div>
+
+@if (loading()) {
+  @for (i of [1,2,3,4,5]; track i) {
+    <div class="skeleton" style="height:52px;border-radius:var(--radius-md);margin-bottom:8px"></div>
+  }
+} @else {
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>ID</th><th>İsim</th><th>E-posta</th><th>Rol</th><th>Durum</th><th>Kayıt</th><th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of users(); track u.id) {
+          <tr>
+            <td class="text-dim text-sm">#{{ u.id }}</td>
+            <td>
+              <div class="user-cell">
+                <div class="user-avatar-sm">{{ u.firstName[0] }}{{ u.lastName[0] }}</div>
+                {{ u.firstName }} {{ u.lastName }}
+              </div>
+            </td>
+            <td class="text-muted text-sm">{{ u.email }}</td>
+            <td>
+              <span class="badge" [class]="roleBadge(u.role)">{{ u.role }}</span>
+            </td>
+            <td>
+              <span class="badge" [class]="u.isActive ? 'badge-success' : 'badge-danger'">
+                {{ u.isActive ? 'Aktif' : 'Pasif' }}
+              </span>
+            </td>
+            <td class="text-dim text-xs">{{ u.createdAt | date:'dd.MM.yyyy' }}</td>
+            <td>
+              <div class="row-actions">
+                <select class="form-input" style="padding:4px 8px;font-size:12px;width:auto" [value]="u.role" (change)="changeRole(u, $event)">
+                  <option value="USER">User</option>
+                  <option value="SELLER">Seller</option>
+                  <option value="ADMIN">Admin</option>
+                </select>
+                <button class="btn btn-ghost btn-sm" (click)="toggleActive(u)">
+                  {{ u.isActive ? 'Deaktif Et' : 'Aktif Et' }}
+                </button>
+                <button class="btn btn-ghost btn-sm" style="color:var(--clr-danger)" (click)="deleteUser(u)">
+                  Sil
+                </button>
+              </div>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="pagination">
+    <button class="btn btn-ghost btn-sm" [disabled]="page() === 0" (click)="goPage(page()-1)">← Önceki</button>
+    <span class="text-muted text-sm">Sayfa {{ page()+1 }} / {{ totalPages() }}</span>
+    <button class="btn btn-ghost btn-sm" [disabled]="page() >= totalPages()-1" (click)="goPage(page()+1)">Sonraki →</button>
+  </div>
+}
+
+<app-confirm-dialog #confirmDialog />

@@ -1,0 +1,147 @@
+<div class="page-header">
+  <h2>Ürünlerim</h2>
+  <button class="btn btn-primary btn-sm" style="background:var(--clr-accent);border:none" (click)="toggleShowForm()">+
+    Ürün Ekle</button>
+</div>
+
+@if (showForm()) {
+<div class="form-card">
+  <h3>{{ editId() ? 'Ürünü Düzenle' : 'Yeni Ürün Ekle' }}</h3>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="grid-2" style="gap:12px">
+      <div class="form-group">
+        <label class="form-label">Ürün Adı *</label>
+        <input formControlName="name" class="form-input" [class.error]="showErr('name')" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">SKU *</label>
+        <input formControlName="sku" class="form-input" [class.error]="showErr('sku')" />
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Kısa Açıklama</label>
+      <textarea formControlName="description" class="form-input" rows="2" style="resize:vertical"></textarea>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Detaylı Açıklama (HTML)</label>
+      <textarea formControlName="longDescription" class="form-input" rows="4" style="resize:vertical"
+        placeholder="<p>Ürün detayları...</p>"></textarea>
+    </div>
+    <div class="grid-2" style="gap:12px;margin-top:12px">
+      <div class="form-group">
+        <label class="form-label">Fiyat (₺) *</label>
+        <input formControlName="price" type="number" class="form-input" step="0.01" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">İndirimli Fiyat (₺)</label>
+        <input formControlName="discountedPrice" type="number" class="form-input" step="0.01" />
+      </div>
+    </div>
+    <div class="grid-2" style="gap:12px;margin-top:12px">
+      <div class="form-group">
+        <label class="form-label">Stok Adedi</label>
+        <input formControlName="stockQuantity" type="number" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Marka</label>
+        <input formControlName="brand" class="form-input" />
+      </div>
+    </div>
+
+    <!-- Kategori Seçimi -->
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Kategori</label>
+      <select formControlName="categoryId" class="form-input">
+        <option [ngValue]="null">-- Kategori Seçin --</option>
+        @for (cat of flatCategories(); track cat.id) {
+          <option [ngValue]="cat.id">{{ cat.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Etiketler (virgülle ayırın)</label>
+      <input formControlName="tags" class="form-input" placeholder="spor, ayakkabı, nike" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button type="submit" class="btn btn-sm" style="background:var(--clr-accent);color:#fff;border:none"
+        [disabled]="saving()">
+        @if (saving()) { <span class="spinner"></span> } Kaydet
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="closeForm()">İptal</button>
+    </div>
+  </form>
+</div>
+}
+
+@if (loading()) {
+@for (i of [1,2,3]; track i) {
+<div class="skeleton" style="height:56px;border-radius:var(--radius-md);margin-bottom:8px"></div>
+}
+} @else if (products().length === 0) {
+<div class="empty-state">
+  <p class="text-muted">Henüz ürün eklemediniz.</p>
+  <button class="btn btn-sm" style="margin-top:10px;background:var(--clr-accent);color:#fff;border:none"
+    (click)="showForm.set(true)">İlk Ürünü Ekle</button>
+</div>
+} @else {
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Ürün</th>
+        <th>Kategori</th>
+        <th>Fiyat</th>
+        <th>Stok</th>
+        <th>Durum</th>
+        <th>İşlem</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (p of products(); track p.id) {
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            @if (p.primaryImageUrl) {
+            <img [src]="p.primaryImageUrl"
+              style="width:36px;height:36px;border-radius:var(--radius-sm);object-fit:cover" />
+            } @else {
+            <div
+              style="width:36px;height:36px;border-radius:var(--radius-sm);background:var(--clr-surface-2);display:flex;align-items:center;justify-content:center">
+              📦</div>
+            }
+            <div>
+              <div style="font-size:13px;font-weight:500">{{ p.name }}</div>
+              <div class="text-dim text-xs">ID: {{ p.id }}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          @if (p.categoryName) {
+            <span class="badge badge-info" style="font-size:11px">{{ p.categoryName }}</span>
+          } @else {
+            <span class="text-dim text-xs">—</span>
+          }
+        </td>
+        <td style="font-size:13px">₺{{ (p.discountedPrice ?? p.price).toFixed(2) }}</td>
+        <td>
+          <span [class]="p.stockQuantity===0?'text-danger':p.stockQuantity<5?'text-warning':'text-success'"
+            style="font-size:13px">{{ p.stockQuantity }}</span>
+        </td>
+        <td>
+          <span class="badge" [class]="p.isActive !== false ? 'badge-success':'badge-muted'">
+            {{ p.isActive !== false ? 'Aktif':'Pasif' }}
+          </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" (click)="editProduct(p)">Düzenle</button>
+            <button class="btn btn-danger btn-sm" (click)="deleteProduct(p.id)">Sil</button>
+          </div>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
+}

@@ -1,0 +1,137 @@
+<div class="auth-layout">
+  <div class="auth-deco">
+    <div class="deco-content">
+      <div class="deco-logo">✦ ShopAI</div>
+      <h2>Topluluğumuza<br/><span class="highlight">katılın.</span></h2>
+      <p>Binlerce kullanıcı ve satıcıyla büyüyen platformumuzda yerinizi alın.</p>
+      <div class="role-cards">
+        <div class="role-card" [class.active]="selectedRole() === 'USER'" (click)="setRole('USER')">
+          <span class="role-icon">🛍️</span>
+          <div>
+            <div class="role-name">Alıcı</div>
+            <div class="role-desc">Alışveriş yap, favori listesi oluştur</div>
+          </div>
+        </div>
+        <div class="role-card" [class.active]="selectedRole() === 'SELLER'" (click)="setRole('SELLER')">
+          <span class="role-icon">🏪</span>
+          <div>
+            <div class="role-name">Satıcı</div>
+            <div class="role-desc">Ürünlerini listele, mağazanı yönet</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="deco-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <div class="auth-header">
+        <h1>Hesap Oluştur</h1>
+        <p>Tüm alanları doldurun</p>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <!-- Role selector -->
+        <div class="role-toggle">
+          <button type="button" [class.active]="selectedRole() === 'USER'" (click)="setRole('USER')">
+            🛍️ Alıcı
+          </button>
+          <button type="button" [class.active]="selectedRole() === 'SELLER'" (click)="setRole('SELLER')">
+            🏪 Satıcı
+          </button>
+        </div>
+
+        <div class="grid-2" style="gap:12px">
+          <div class="form-group">
+            <label class="form-label">Ad</label>
+            <input formControlName="firstName" type="text" class="form-input"
+              [class.error]="showError('firstName')" placeholder="Adınız" />
+            @if (showError('firstName')) {
+              <span class="form-error">Zorunlu alan.</span>
+            }
+          </div>
+          <div class="form-group">
+            <label class="form-label">Soyad</label>
+            <input formControlName="lastName" type="text" class="form-input"
+              [class.error]="showError('lastName')" placeholder="Soyadınız" />
+            @if (showError('lastName')) {
+              <span class="form-error">Zorunlu alan.</span>
+            }
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">E-posta</label>
+          <input formControlName="email" type="email" class="form-input"
+            [class.error]="showError('email')" placeholder="ornek@email.com" />
+          @if (showError('email')) {
+            <span class="form-error">{{ getError('email') }}</span>
+          }
+        </div>
+
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">Telefon <span class="text-dim">(opsiyonel)</span></label>
+          <input formControlName="phone" type="tel" class="form-input" placeholder="+90 5XX XXX XX XX" />
+        </div>
+
+        @if (selectedRole() === 'SELLER') {
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">Mağaza Adı</label>
+            <input formControlName="shopName" type="text" class="form-input"
+              [class.error]="showError('shopName')" placeholder="Mağazanızın adı" />
+            @if (showError('shopName')) {
+              <span class="form-error">Satıcılar için zorunludur.</span>
+            }
+          </div>
+        }
+
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">Şifre</label>
+          <div class="input-wrap">
+            <input formControlName="password" [type]="showPass() ? 'text' : 'password'"
+              class="form-input" [class.error]="showError('password')" placeholder="En az 8 karakter" />
+            <button type="button" class="eye-btn" (click)="toggleShowPass()">{{ showPass() ? '👁' : '👁‍🗨' }}</button>
+          </div>
+          @if (showError('password')) {
+            <span class="form-error">{{ getError('password') }}</span>
+          }
+          @if (form.get('password')?.value) {
+            <div class="strength-bar">
+              <div class="strength-fill" [style.width.%]="strengthPct()" [class]="strengthClass()"></div>
+            </div>
+            <span class="form-hint">{{ strengthLabel() }}</span>
+          }
+        </div>
+
+        <div class="form-group" style="margin-top:12px">
+          <label class="form-label">Şifre Tekrar</label>
+          <input formControlName="confirmPassword" [type]="showPass() ? 'text' : 'password'"
+            class="form-input"
+            [class.error]="form.errors?.['mismatch'] && form.get('confirmPassword')?.touched"
+            placeholder="Şifrenizi tekrar girin" />
+          @if (form.errors?.['mismatch'] && form.get('confirmPassword')?.touched) {
+            <span class="form-error">Şifreler eşleşmiyor.</span>
+          }
+        </div>
+
+        @if (serverError()) {
+          <div class="server-error">{{ serverError() }}</div>
+        }
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:24px" [disabled]="loading()">
+          @if (loading()) { <span class="spinner"></span> }
+          Hesap Oluştur
+        </button>
+      </form>
+
+      <div class="auth-divider"><span>zaten hesabınız var mı?</span></div>
+      <div style="text-align:center">
+        <a routerLink="/auth/login" style="font-size:14px">Giriş Yapın →</a>
+      </div>
+    </div>
+  </div>
+</div>

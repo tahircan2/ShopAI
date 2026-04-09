@@ -1,0 +1,35 @@
+<div class="page-header">
+  <h2>Mağaza Ayarları</h2>
+</div>
+<div class="settings-card">
+  <h3>Mağaza Bilgileri</h3>
+  <form [formGroup]="form" (ngSubmit)="save()">
+    <div class="form-group">
+      <label class="form-label">Mağaza Adı</label>
+      <input formControlName="shopName" class="form-input" placeholder="Mağazanızın adı" />
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Mağaza Açıklaması</label>
+      <textarea formControlName="shopDescription" class="form-input" rows="4" placeholder="Mağazanız hakkında kısa bir açıklama..." style="resize:vertical"></textarea>
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Ad</label>
+      <input formControlName="firstName" class="form-input" />
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Soyad</label>
+      <input formControlName="lastName" class="form-input" />
+    </div>
+    <div class="form-group" style="margin-top:12px">
+      <label class="form-label">Telefon</label>
+      <input formControlName="phone" class="form-input" type="tel" />
+    </div>
+    @if (saved()) {
+      <div class="success-msg">✓ Değişiklikler kaydedildi!</div>
+    }
+    <button type="submit" class="btn btn-sm" style="margin-top:16px;background:var(--clr-accent);color:#fff;border:none" [disabled]="saving()">
+      @if (saving()) { <span class="spinner"></span> }
+      Kaydet
+    </button>
+  </form>
+</div>

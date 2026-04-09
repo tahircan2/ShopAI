@@ -1,0 +1,60 @@
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="brand-logo">✦ ShopAI</div>
+        <p>Yapay zeka destekli alışveriş deneyimi. En uygun ürünleri AI asistanınızla keşfedin.</p>
+        <div class="social-links">
+          <a href="#" class="social-btn" title="Twitter">𝕏</a>
+          <a href="#" class="social-btn" title="Instagram">📷</a>
+          <a href="#" class="social-btn" title="LinkedIn">in</a>
+        </div>
+      </div>
+
+      <div class="footer-col">
+        <div class="col-title">Keşfet</div>
+        <a routerLink="/products">Tüm Ürünler</a>
+        <!-- categorySlug kullan - backend Specification destekli -->
+        <a [routerLink]="['/products']" [queryParams]="{categorySlug: 'elektronik'}">Elektronik</a>
+        <a [routerLink]="['/products']" [queryParams]="{categorySlug: 'giyim'}">Giyim</a>
+        <a [routerLink]="['/products']" [queryParams]="{sortBy: 'ratingAvg', sortDir: 'desc'}">En Çok Beğenilenler</a>
+        <a [routerLink]="['/products']" [queryParams]="{isFeatured: 'true'}">Öne Çıkanlar</a>
+      </div>
+
+      <div class="footer-col">
+        <div class="col-title">Hesabım</div>
+        <!-- Auth linkleri sadece giriş yapılmamışsa göster -->
+        @if (!auth.isLoggedIn()) {
+          <a routerLink="/auth/login">Giriş Yap</a>
+          <a routerLink="/auth/register">Kayıt Ol</a>
+        }
+        <a routerLink="/profile">Profilim</a>
+        <a routerLink="/orders">Siparişlerim</a>
+        <a routerLink="/wishlist">Favorilerim</a>
+      </div>
+
+      <div class="footer-col">
+        <div class="col-title">Yardım</div>
+        <a routerLink="/legal/faq">Sıkça Sorulan Sorular</a>
+        <a routerLink="/legal/shipping">Kargo Bilgisi</a>
+        <a routerLink="/legal/returns">İade &amp; Değişim</a>
+        <a routerLink="/contact">İletişim</a>
+        @if (!auth.isLoggedIn()) {
+          <a routerLink="/auth/register" [queryParams]="{role:'SELLER'}">Satıcı Ol</a>
+        }
+        @if (auth.isSeller()) {
+          <a routerLink="/seller">Satıcı Paneliniz</a>
+        }
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; {{ currentYear }} ShopAI. Tüm hakları saklıdır.</p>
+      <div class="footer-links">
+        <a routerLink="/about">Hakkımızda</a>
+        <a routerLink="/legal/privacy">Gizlilik Politikası</a>
+        <a routerLink="/legal/terms">Kullanım Koşulları</a>
+      </div>
+    </div>
+  </div>
+</footer>

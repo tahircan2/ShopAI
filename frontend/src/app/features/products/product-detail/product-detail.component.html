@@ -1,0 +1,266 @@
+<div class="container" style="padding-top:88px;padding-bottom:60px">
+  @if (loading()) {
+  <div class="detail-skeleton">
+    <div class="skeleton" style="height:500px;border-radius:var(--radius-lg)"></div>
+    <div>
+      <div class="skeleton" style="height:32px;width:60%;margin-bottom:12px"></div>
+      <div class="skeleton" style="height:20px;width:40%;margin-bottom:20px"></div>
+      <div class="skeleton" style="height:48px;width:30%"></div>
+    </div>
+  </div>
+  } @else if (product()) {
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <a routerLink="/">Ana Sayfa</a>
+    <span>/</span>
+    <a routerLink="/products">Ürünler</a>
+    @if (product()?.category) {
+    <span>/</span>
+    <span class="text-muted">{{ product()?.category?.name }}</span>
+    }
+    <span>/</span>
+    <span class="text-muted">{{ product()?.name }}</span>
+  </div>
+
+  <div class="detail-grid">
+    <!-- Left: Gallery -->
+    <div class="gallery">
+      <div class="main-img-wrap">
+        @if (currentImage()) {
+        <img [src]="currentImage()" [alt]="product()!.name" class="main-img" />
+        } @else {
+        <div class="img-placeholder">📦</div>
+        }
+        @if (product()!.discountedPrice) {
+        <div class="discount-badge">-{{ discountPct() }}%</div>
+        }
+      </div>
+      @if (product()!.images.length > 1) {
+      <div class="thumbnails scroll-x">
+        @for (img of product()!.images; track img.id) {
+        <button class="thumb" [class.active]="selectedImageIndex() === $index" (click)="selectedImageIndex.set($index)">
+          <img [src]="img.imageUrl" [alt]="img.altText ?? product()!.name" />
+        </button>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- Right: Info -->
+    <div class="product-info">
+      @if (product()!.brand) {
+      <span class="brand-tag">{{ product()!.brand }}</span>
+      }
+      <h1 class="product-title">{{ product()!.name }}</h1>
+
+      <!-- Rating -->
+      <div class="rating-row">
+        <div class="stars">
+          @for (i of [1,2,3,4,5]; track i) {
+          <span [class.filled]="i <= product()!.ratingAvg">★</span>
+          }
+        </div>
+        <span class="rating-val">{{ product()!.ratingAvg.toFixed(1) }}</span>
+        <span class="rating-count text-muted">({{ product()!.ratingCount }} değerlendirme)</span>
+        <a (click)="scrollToReviews($event)" class="review-link" style="cursor:pointer">Yorumları Gör</a>
+      </div>
+
+      <!-- Price -->
+      <div class="price-block">
+        @if (product()!.discountedPrice) {
+        <span class="price-main">{{ finalPrice() | currencyFormat }}</span>
+        <span class="price-old">{{ (product()!.price + selectedVariantModifier()) | currencyFormat }}</span>
+        <span class="badge badge-danger">%{{ discountPct() }} İndirim</span>
+        } @else {
+        <span class="price-main">{{ finalPrice() | currencyFormat }}</span>
+        }
+      </div>
+
+      <!-- Description -->
+      @if (product()!.description) {
+      <p class="product-desc">{{ product()!.description }}</p>
+      }
+
+      <!-- Color Variants -->
+      @if (colorOptions().length > 0) {
+      <div class="variant-group">
+        <div class="variant-label">Renk: <strong>{{ selectedColor() ?? 'Seçilmedi' }}</strong></div>
+        <div class="color-options">
+          @for (c of colorOptions(); track c.color) {
+          <button class="color-btn" [class.active]="selectedColor() === c.color" [style.background]="c.hex ?? '#888'"
+            [title]="c.color ?? ''" (click)="selectColor(c.color)"></button>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Size Variants -->
+      @if (sizeOptions().length > 0) {
+      <div class="variant-group">
+        <div class="variant-label">Beden: <strong>{{ selectedSize() ?? 'Seçilmedi' }}</strong></div>
+        <div class="size-options">
+          @for (s of sizeOptions(); track s) {
+          <button class="size-btn" [class.active]="selectedSize() === s" (click)="selectSize(s)">{{ s }}</button>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Quantity -->
+      <div class="qty-group">
+        <div class="variant-label">Adet</div>
+        <div class="qty-control">
+          <button class="qty-btn" (click)="decQty()">−</button>
+          <span class="qty-val">{{ qty() }}</span>
+          <button class="qty-btn" (click)="incQty()">+</button>
+        </div>
+        <span class="stock-info" [class.low]="stockInfo() === 'low'">
+          @if (product()!.stockQuantity === 0) {
+          <span class="text-danger">Stok tükendi</span>
+          } @else if (stockInfo() === 'low') {
+          <span class="text-warning">Son {{ maxStock() }} adet!</span>
+          } @else {
+          <span class="text-success">Stokta mevcut</span>
+          }
+        </span>
+      </div>
+
+      <!-- Actions -->
+      <div class="action-buttons">
+        <button class="btn btn-primary btn-lg" style="flex:1" (click)="addToCart()"
+          [disabled]="product()!.stockQuantity === 0 || addingToCart()">
+          @if (addingToCart()) { <span class="spinner"></span> }
+          @else { 🛒 }
+          Sepete Ekle
+        </button>
+        <button class="btn-icon btn-lg" style="width:48px;height:48px" (click)="toggleWishlist()"
+          [title]="inWishlist() ? 'Favorilerden çıkar' : 'Favorilere ekle'">
+          {{ inWishlist() ? '❤️' : '🤍' }}
+        </button>
+      </div>
+
+      <!-- Features -->
+      <div class="features-row">
+        <div class="feat"><span>🚚</span> 500₺ üzeri ücretsiz kargo</div>
+        <div class="feat"><span>🔄</span> 14 gün koşulsuz iade</div>
+        <div class="feat"><span>🔒</span> Güvenli ödeme</div>
+      </div>
+
+      <!-- SKU -->
+      @if (product()!.sku) {
+      <div class="sku-row text-dim text-xs">SKU: {{ product()!.sku }}</div>
+      }
+    </div>
+  </div>
+
+  <!-- Tabs: Description & Reviews -->
+  <div class="tabs-section" style="margin-top:48px">
+    <div class="tabs">
+      <button class="tab" [class.active]="detailTab() === 'desc'" (click)="detailTab.set('desc')">Ürün
+        Açıklaması</button>
+      <button class="tab" [class.active]="detailTab() === 'reviews'" id="reviews" (click)="detailTab.set('reviews')">
+        Değerlendirmeler ({{ product()!.ratingCount }})
+      </button>
+    </div>
+
+    @if (detailTab() === 'desc') {
+    <div class="tab-content fade-in">
+      @if (product()!.longDescription) {
+      <div class="long-desc" [innerHTML]="product()!.longDescription"></div>
+      } @else if (product()!.description) {
+      <p>{{ product()!.description }}</p>
+      } @else {
+      <p class="text-muted">Bu ürün için açıklama bulunmamaktadır.</p>
+      }
+    </div>
+    }
+
+    @if (detailTab() === 'reviews') {
+    <div class="tab-content fade-in">
+      <!-- Rating Summary -->
+      <div class="rating-summary">
+        <div class="rating-big">
+          <div class="rating-num">{{ product()!.ratingAvg.toFixed(1) }}</div>
+          <div class="rating-stars">
+            @for (i of [1,2,3,4,5]; track i) {
+            <span [class.filled]="i <= Math.round(product()!.ratingAvg)">★</span>
+            }
+          </div>
+          <div class="text-muted text-sm">{{ product()!.ratingCount }} değerlendirme</div>
+        </div>
+      </div>
+
+      <!-- Write Review -->
+      @if (auth.isLoggedIn() && !hasUserReviewed()) {
+      <div class="review-form-wrap">
+        <h4>Değerlendirme Yaz</h4>
+        <form [formGroup]="reviewForm" (ngSubmit)="submitReview()">
+          <div class="star-picker">
+            @for (i of [1,2,3,4,5]; track i) {
+            <button type="button" class="star-pick" [class.active]="i <= (reviewForm.value.rating ?? 0)"
+              (click)="reviewForm.patchValue({rating: i})">★</button>
+            }
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <input formControlName="title" type="text" class="form-input" placeholder="Başlık (opsiyonel)" />
+          </div>
+          <div class="form-group" style="margin-top:10px">
+            <textarea formControlName="comment" class="form-input" rows="3" placeholder="Yorumunuzu yazın..."
+              style="resize:vertical"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm" style="margin-top:12px" [disabled]="submittingReview()">
+            @if (submittingReview()) { <span class="spinner"></span> }
+            Değerlendirme Gönder
+          </button>
+        </form>
+      </div>
+      } @else if (auth.isLoggedIn() && hasUserReviewed()) {
+      <div class="review-form-wrap" style="text-align:center; padding:20px; background:var(--bg-card); border-radius:var(--radius-md);">
+        Siz bu ürünü zaten değerlendirdiniz.
+      </div>
+      }
+
+      <!-- Reviews List -->
+      @if (loadingReviews()) {
+      @for (i of [1,2,3]; track i) {
+      <div class="skeleton" style="height:80px;border-radius:var(--radius-md);margin-bottom:10px"></div>
+      }
+      } @else if (reviews().length === 0) {
+      <p class="text-muted" style="padding:20px 0">Henüz değerlendirme yok. İlk değerlendirmeyi siz yapın!</p>
+      } @else {
+      @for (r of reviews(); track r.id) {
+      <div class="review-item" style="position: relative;">
+        <div class="review-header">
+          <div class="reviewer-avatar">{{ (r.userFullName || r.userName || 'K')[0].toUpperCase() }}</div>
+          <div>
+            <div class="reviewer-name">{{ r.userFullName || r.userName || 'Kullanıcı' }}</div>
+            <div class="review-date text-dim text-xs">{{ r.createdAt | date:'dd.MM.yyyy' }}</div>
+          </div>
+          <div class="review-stars">
+            @for (i of [1,2,3,4,5]; track i) {
+            <span [class.filled]="i <= r.rating">★</span>
+            }
+          </div>
+          @if (r.isVerifiedPurchase) {
+          <span class="badge badge-success" style="margin-left:auto">✓ Satın Aldı</span>
+          }
+        </div>
+        @if (r.title) { <div class="review-title">{{ r.title }}</div> }
+        @if (r.comment) { <p class="review-comment text-muted">{{ r.comment }}</p> }
+        @if (r.userId === auth.currentUser()?.id) {
+          <button class="btn btn-danger btn-sm" style="position: absolute; right: 16px; bottom: 16px;" (click)="deleteReview(r.id)">Sil</button>
+        }
+      </div>
+      }
+      }
+    </div>
+    }
+  </div>
+  } @else {
+  <div class="not-found" style="text-align:center;padding:80px 20px">
+    <div style="font-size:48px;margin-bottom:16px">😕</div>
+    <h3>Ürün Bulunamadı</h3>
+    <a routerLink="/products" class="btn btn-primary" style="margin-top:16px">Ürünlere Dön</a>
+  </div>
+  }
+</div>

@@ -1,0 +1,147 @@
+<!-- Hero -->
+<section class="hero">
+  <div class="hero-bg">
+    <div class="hero-orb hero-orb-1"></div>
+    <div class="hero-orb hero-orb-2"></div>
+    <div class="hero-grid"></div>
+  </div>
+  <div class="container hero-content">
+    <div class="hero-badge">
+      <span class="badge badge-primary">✦ AI Destekli Alışveriş</span>
+    </div>
+    <h1 class="hero-title">
+      Alışverişin<br />
+      <span class="hero-gradient">akıllı</span> hali
+    </h1>
+    <p class="hero-desc">
+      Yapay zeka asistanımız size en uygun ürünleri buluyor,
+      kişiselleştirilmiş öneriler sunuyor, alışverişinizi
+      kolaylaştırıyor.
+    </p>
+    <div class="hero-actions">
+      <a routerLink="/products" class="btn btn-primary btn-lg">
+        Ürünleri Keşfet
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M5 12h14M12 5l7 7-7 7" />
+        </svg>
+      </a>
+      <button class="btn btn-ghost btn-lg" (click)="scrollToFeatures()">
+        Nasıl Çalışır?
+      </button>
+    </div>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">50K+</div>
+        <div class="stat-label">Ürün</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-num">120K+</div>
+        <div class="stat-label">Kullanıcı</div>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat">
+        <div class="stat-num">4.8★</div>
+        <div class="stat-label">Ortalama Puan</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-header">
+      <h2>Neden ShopAI?</h2>
+      <p>Geleneksel alışverişin ötesine geçin</p>
+    </div>
+    <div class="features-grid">
+      @for (feat of features; track feat.icon) {
+      <div class="feat-card">
+        <div class="feat-icon">{{ feat.icon }}</div>
+        <h4>{{ feat.title }}</h4>
+        <p>{{ feat.desc }}</p>
+      </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Featured Products -->
+<section class="featured-section">
+  <div class="container">
+    <div class="section-header">
+      <h2>Öne Çıkan Ürünler</h2>
+      <a routerLink="/products" class="see-all">Tümünü Gör →</a>
+    </div>
+
+    @if (loading()) {
+    <div class="products-grid">
+      @for (i of [1,2,3,4]; track i) {
+      <div class="product-skeleton">
+        <div class="skeleton" style="height:220px;border-radius:var(--radius-lg)"></div>
+        <div class="skeleton" style="height:18px;margin-top:12px;width:80%"></div>
+        <div class="skeleton" style="height:14px;margin-top:8px;width:50%"></div>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="products-grid">
+      @for (p of products(); track p.id) {
+      <a [routerLink]="['/products', p.slug]" class="product-card">
+        <div class="product-img-wrap">
+          @if (p.primaryImageUrl) {
+          <img [src]="p.primaryImageUrl" [alt]="p.name" class="product-img" loading="lazy" />
+          } @else {
+          <div class="product-img-placeholder">📦</div>
+          }
+          @if (p.discountedPrice) {
+          <div class="discount-badge">
+            -{{ discountPct(p) }}%
+          </div>
+          }
+          @if (p.isFeatured) {
+          <div class="featured-badge">⭐ Öne Çıkan</div>
+          }
+        </div>
+        <div class="product-info">
+          @if (p.brand) {
+          <span class="product-brand">{{ p.brand }}</span>
+          }
+          <h4 class="product-name">{{ p.name }}</h4>
+          <div class="product-rating">
+            <span class="stars">{{ stars(p.ratingAvg) }}</span>
+            <span class="rating-count">({{ p.ratingCount }})</span>
+          </div>
+          <div class="product-price">
+            @if (p.discountedPrice) {
+            <span class="price-new">{{ p.discountedPrice | currencyFormat }}</span>
+            <span class="price-old">{{ p.price | currencyFormat }}</span>
+            } @else {
+            <span class="price-new">{{ p.price | currencyFormat }}</span>
+            }
+          </div>
+        </div>
+      </a>
+      }
+    </div>
+    }
+  </div>
+</section>
+
+<!-- CTA -->
+@if (!auth.isLoggedIn()) {
+<section class="cta-section">
+  <div class="container">
+    <div class="cta-card">
+      <div class="cta-orb"></div>
+      <h2>Hemen Başlayın</h2>
+      <p>Ücretsiz hesap oluşturun, AI asistanınızla tanışın.</p>
+      <div class="cta-actions">
+        <a routerLink="/auth/register" class="btn btn-primary btn-lg">Ücretsiz Kaydol</a>
+        <a routerLink="/auth/login" class="btn btn-ghost btn-lg">Giriş Yap</a>
+      </div>
+    </div>
+  </div>
+</section>
+}

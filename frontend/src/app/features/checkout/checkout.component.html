@@ -1,0 +1,191 @@
+<div class="container" style="padding-top:88px;padding-bottom:60px;max-width:900px">
+  <h1 style="margin-bottom:28px">Ödeme</h1>
+
+  <!-- Stepper -->
+  <div class="stepper">
+    @for (step of steps; track step.num; let i = $index) {
+    <div class="step" [class.active]="currentStep() === i" [class.done]="currentStep() > i">
+      <div class="step-circle">
+        @if (currentStep() > i) { ✓ } @else { {{ step.num }} }
+      </div>
+      <span class="step-label">{{ step.label }}</span>
+      @if (i < steps.length - 1) { <div class="step-line">
+    </div> }
+  </div>
+  }
+</div>
+
+<div class="checkout-layout">
+  <div class="checkout-main">
+
+    <!-- Step 1: Address -->
+    @if (currentStep() === 0) {
+    <div class="step-card fade-in">
+      <h3>Teslimat Adresi</h3>
+      @if (loadingAddresses()) {
+      <div class="skeleton" style="height:100px;border-radius:var(--radius-md)"></div>
+      } @else {
+      @for (addr of addresses(); track addr.id) {
+      <label class="address-option" [class.selected]="selectedAddressId() === addr.id">
+        <input type="radio" name="addr" [value]="addr.id" (change)="selectedAddressId.set(addr.id)" />
+        <div class="addr-content">
+          <div class="addr-name">{{ addr.fullName }} {{ addr.label ? '(' + addr.label + ')' : '' }}</div>
+          <div class="addr-line text-muted text-sm">{{ addr.addressLine1 }}, {{ addr.city }}</div>
+          <div class="addr-phone text-dim text-xs">{{ addr.phone }}</div>
+        </div>
+        @if (addr.isDefault) { <span class="badge badge-primary" style="flex-shrink:0">Varsayılan</span> }
+      </label>
+      }
+      }
+
+      @if (addresses().length === 0 || showAddressForm()) {
+      <div class="new-address-form slide-up" style="margin-top:20px; padding:20px; border:1px solid var(--clr-border); border-radius:var(--radius-md); background:var(--clr-surface-2)">
+        <h4 style="margin-bottom:16px">Yeni Adres Ekle</h4>
+        <form [formGroup]="addressForm">
+          <div class="grid-2">
+            <div class="form-group"><label class="form-label">Ad Soyad</label><input formControlName="fullName" class="form-input"></div>
+            <div class="form-group"><label class="form-label">Telefon</label><input formControlName="phone" class="form-input"></div>
+            <div class="form-group"><label class="form-label">İl</label><input formControlName="city" class="form-input"></div>
+            <div class="form-group"><label class="form-label">İlçe</label><input formControlName="district" class="form-input"></div>
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">Açık Adres</label>
+            <textarea formControlName="addressLine1" class="form-input" rows="2"></textarea>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:20px">
+            @if (addresses().length > 0) {
+              <button type="button" class="btn btn-ghost" (click)="showAddressForm.set(false)">İptal</button>
+            }
+            <button type="button" class="btn btn-primary" (click)="saveAddress()" [disabled]="savingAddress()">
+              @if (savingAddress()) { <span class="spinner"></span> }
+              Adresi Kaydet
+            </button>
+          </div>
+        </form>
+      </div>
+      } @else {
+        <button class="btn btn-ghost btn-sm" (click)="showAddressForm.set(true)" style="margin-top:20px">+ Yeni Adres Ekle</button>
+      }
+
+      <div style="margin-top:24px;border-top:1px solid var(--clr-border);padding-top:24px">
+        <button class="btn btn-primary" (click)="nextStep()" [disabled]="!selectedAddressId() || showAddressForm() || addresses().length === 0">
+          Devam Et →
+        </button>
+      </div>
+    </div>
+    }
+
+    <!-- Step 2: Summary -->
+    @if (currentStep() === 1) {
+    <div class="step-card fade-in">
+      <h3>Sipariş Özeti</h3>
+      <div class="order-items">
+        @for (item of cartService.cart()?.items ?? []; track item.id) {
+        <div class="order-item">
+          <div class="order-item-img">
+            @if (item.primaryImageUrl) {
+            <img [src]="item.primaryImageUrl" [alt]="item.productName" />
+            } @else {
+            <div class="img-ph">📦</div>
+            }
+          </div>
+          <div style="flex:1">
+            <div class="text-sm" style="font-weight:500">{{ item.productName }}</div>
+          </div>
+          <div class="text-sm text-muted">x{{ item.quantity }}</div>
+          <div class="text-sm" style="font-weight:500">₺{{ (item.priceAtAdd * item.quantity).toFixed(2) }}</div>
+        </div>
+        }
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px">
+        <button class="btn btn-ghost" (click)="prevStep()">← Geri</button>
+        <button class="btn btn-primary" (click)="nextStep()">Ödemeye Geç →</button>
+      </div>
+    </div>
+    }
+
+    <!-- Step 3: Payment -->
+    @if (currentStep() === 2) {
+    <div class="step-card fade-in">
+      <h3>Ödeme Bilgileri</h3>
+      <form [formGroup]="paymentForm">
+        <div class="payment-methods">
+          <label class="payment-method" [class.selected]="paymentForm.value.method === 'CREDIT_CARD'">
+            <input type="radio" formControlName="method" value="CREDIT_CARD" />
+            💳 Kredi Kartı
+          </label>
+          <label class="payment-method" [class.selected]="paymentForm.value.method === 'BANK_TRANSFER'">
+            <input type="radio" formControlName="method" value="BANK_TRANSFER" />
+            🏦 Havale / EFT
+          </label>
+          <label class="payment-method" [class.selected]="paymentForm.value.method === 'CASH_ON_DELIVERY'">
+            <input type="radio" formControlName="method" value="CASH_ON_DELIVERY" />
+            💵 Kapıda Ödeme
+          </label>
+        </div>
+
+        @if (paymentForm.value.method === 'CREDIT_CARD') {
+        <div class="card-form">
+          <div class="form-group">
+            <label class="form-label">Kart Üzerindeki İsim</label>
+            <input formControlName="cardName" type="text" class="form-input" placeholder="AD SOYAD" />
+          </div>
+          <div class="form-group" style="margin-top:12px">
+            <label class="form-label">Kart Numarası</label>
+            <input formControlName="cardNumber" type="text" class="form-input" placeholder="**** **** **** ****"
+              maxlength="19" />
+          </div>
+          <div class="grid-2" style="gap:12px;margin-top:12px">
+            <div class="form-group">
+              <label class="form-label">Son Kullanma Tarihi</label>
+              <input formControlName="expiry" type="text" class="form-input" placeholder="MM/YY" maxlength="5" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">CVV</label>
+              <input formControlName="cvv" type="text" class="form-input" placeholder="***" maxlength="3" />
+            </div>
+          </div>
+          <div class="card-security-note">
+            🔒 Ödeme bilgileriniz 256-bit SSL ile şifrelenmektedir. (Demo — gerçek ödeme işlemi yok)
+          </div>
+        </div>
+        }
+      </form>
+
+      @if (serverError()) {
+      <div class="server-error" style="margin-top:16px">{{ serverError() }}</div>
+      }
+
+      <div style="display:flex;gap:8px;margin-top:24px">
+        <button class="btn btn-ghost" (click)="prevStep()">← Geri</button>
+        <button class="btn btn-primary" (click)="placeOrder()" [disabled]="loading()">
+          @if (loading()) { <span class="spinner"></span> }
+          Siparişi Onayla
+        </button>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Right sidebar summary -->
+  <div class="checkout-sidebar">
+    <div class="summary-card">
+      <h4>Fiyat Özeti</h4>
+      <div class="summary-rows">
+        <div class="sum-row"><span class="text-muted text-sm">Ara Toplam</span><span>₺{{
+            cartService.cart()?.subtotal?.toFixed(2) }}</span></div>
+        @if ((cartService.cart()?.discountAmount ?? 0) > 0) {
+        <div class="sum-row success"><span class="text-sm">İndirim</span><span>-₺{{
+            cartService.cart()?.discountAmount?.toFixed(2) }}</span></div>
+        }
+        <div class="sum-row"><span class="text-muted text-sm">Kargo</span><span>{{ cartService.cart()?.shippingCost ===
+            0 ? 'Ücretsiz' : '₺' + cartService.cart()?.shippingCost?.toFixed(2) }}</span></div>
+        <div class="sum-row"><span class="text-muted text-sm">KDV</span><span>₺{{
+            cartService.cart()?.taxAmount?.toFixed(2) }}</span></div>
+        <div class="sum-divider"></div>
+        <div class="sum-row total"><span>Toplam</span><span>₺{{ cartService.cart()?.total?.toFixed(2) }}</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>

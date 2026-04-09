@@ -1,0 +1,8 @@
+/* Styling is mostly handled globally via .pagination and .btn classes */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 32px;
+}

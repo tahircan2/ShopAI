@@ -1,0 +1,100 @@
+:host { display: block; height: 100vh; }
+.auth-layout { display: grid; grid-template-columns: 1fr 1fr; height: 100vh; }
+
+.auth-deco {
+  background: linear-gradient(135deg, #0f1a2e 0%, #1a1530 50%, #13121e 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+  overflow: hidden;
+}
+
+.deco-content {
+  position: relative;
+  z-index: 2;
+  .deco-logo { color: var(--clr-primary-light); font-size: 18px; font-weight: 600; letter-spacing: 1px; margin-bottom: 40px; }
+  h2 { font-size: 2.6rem; font-weight: 300; line-height: 1.15; margin-bottom: 16px; color: rgba(255,255,255,0.9); }
+  .highlight { background: linear-gradient(135deg, var(--clr-accent), var(--clr-primary-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; font-weight: 600; }
+  p { color: rgba(255,255,255,0.5); font-size: 14px; margin-bottom: 32px; }
+}
+
+.role-cards { display: flex; flex-direction: column; gap: 12px; }
+.role-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  transition: all var(--transition);
+  .role-icon { font-size: 24px; }
+  .role-name { font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.8); }
+  .role-desc { font-size: 12px; color: rgba(255,255,255,0.4); margin-top: 2px; }
+  &.active { border-color: var(--clr-primary); background: rgba(124,111,247,0.1); .role-name { color: var(--clr-primary-light); } }
+  &:hover { border-color: rgba(255,255,255,0.2); }
+}
+
+.orb { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.35; }
+.orb-1 { width: 280px; height: 280px; background: #7c6ff7; top: -60px; left: -60px; }
+.orb-2 { width: 200px; height: 200px; background: var(--clr-accent); bottom: 60px; right: -40px; }
+
+.auth-form-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px;
+  background: var(--clr-bg);
+  overflow-y: auto;
+}
+
+.auth-card { width: 100%; max-width: 420px; animation: fade-in 0.4s ease; padding: 20px 0; }
+.auth-header { margin-bottom: 24px; h1 { font-size: 1.8rem; margin-bottom: 4px; } p { color: var(--clr-text-muted); font-size: 13px; } }
+
+.role-toggle {
+  display: flex;
+  background: var(--clr-surface-2);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  margin-bottom: 20px;
+  gap: 4px;
+
+  button {
+    flex: 1;
+    padding: 8px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--clr-text-muted);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all var(--transition);
+    &.active { background: var(--clr-surface-3); color: var(--clr-text); }
+  }
+}
+
+.input-wrap { position: relative; }
+.eye-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 14px; padding: 4px; }
+.input-wrap .form-input { padding-right: 40px; }
+
+.strength-bar { height: 3px; background: var(--clr-surface-3); border-radius: 2px; margin-top: 8px; }
+.strength-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+.strength-fill.weak { background: var(--clr-danger); }
+.strength-fill.medium { background: var(--clr-warning); }
+.strength-fill.strong { background: var(--clr-success); }
+
+.server-error { margin-top: 14px; padding: 12px 14px; background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.2); border-radius: var(--radius-md); color: var(--clr-danger); font-size: 13px; }
+
+.auth-divider { text-align: center; position: relative; margin: 24px 0; color: var(--clr-text-dim); font-size: 13px;
+  &::before { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 1px; background: var(--clr-border); }
+  span { background: var(--clr-bg); padding: 0 12px; position: relative; }
+}
+
+@media (max-width: 768px) {
+  .auth-layout { grid-template-columns: 1fr; height: auto; min-height: 100vh; }
+  .auth-deco { display: none; }
+  .auth-form-side { padding: 80px 24px 40px; }
+}

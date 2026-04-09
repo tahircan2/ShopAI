@@ -1,0 +1,20 @@
+@if (totalPages > 1) {
+<div class="pagination">
+  <button class="btn btn-ghost btn-sm" [disabled]="currentPage === 0" (click)="goPage(currentPage - 1)">
+    ← Önceki
+  </button>
+  
+  @for (p of pageNumbers(); track p) {
+  <button class="btn btn-sm" 
+          [class.btn-primary]="p === currentPage" 
+          [class.btn-ghost]="p !== currentPage"
+          (click)="goPage(p)">
+    {{ p + 1 }}
+  </button>
+  }
+  
+  <button class="btn btn-ghost btn-sm" [disabled]="currentPage === totalPages - 1" (click)="goPage(currentPage + 1)">
+    Sonraki →
+  </button>
+</div>
+}

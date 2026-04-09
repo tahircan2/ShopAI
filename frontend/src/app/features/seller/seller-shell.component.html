@@ -1,0 +1,42 @@
+<div class="seller-layout">
+  <aside class="seller-sidebar" [class.collapsed]="collapsed()">
+    <div class="sidebar-logo">
+      <span class="logo-icon">🏪</span>
+      @if (!collapsed()) { <span class="logo-text">Satıcı Paneli</span> }
+    </div>
+
+    @if (!collapsed()) {
+      <div class="shop-info">
+        <div class="shop-avatar">{{ shopInitial() }}</div>
+        <div>
+          <div class="shop-name">{{ auth.currentUser()?.shopName ?? 'Mağazam' }}</div>
+          <div class="text-dim text-xs">{{ auth.currentUser()?.email }}</div>
+        </div>
+      </div>
+    }
+
+    <nav class="sidebar-nav">
+      @for (item of navItems; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active" class="nav-item" [title]="item.label">
+          <span class="nav-icon">{{ item.icon }}</span>
+          @if (!collapsed()) { <span>{{ item.label }}</span> }
+        </a>
+      }
+    </nav>
+
+    <button class="collapse-btn" (click)="toggleCollapsed()">{{ collapsed() ? '→' : '←' }}</button>
+  </aside>
+
+  <div class="seller-main">
+    <div class="seller-topbar">
+      <span class="topbar-title">Satıcı Paneli</span>
+      <div style="display:flex;align-items:center;gap:12px">
+        <span class="badge badge-warning">Satıcı</span>
+        <a routerLink="/" class="btn btn-ghost btn-sm">← Siteye Dön</a>
+      </div>
+    </div>
+    <div class="seller-content">
+      <router-outlet />
+    </div>
+  </div>
+</div>

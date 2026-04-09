@@ -1,0 +1,46 @@
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="admin-sidebar" [class.collapsed]="collapsed()">
+    <div class="sidebar-logo">
+      <span class="logo-icon">✦</span>
+      @if (!collapsed()) { <span class="logo-text">Admin Paneli</span> }
+    </div>
+
+    <nav class="sidebar-nav">
+      @for (item of navItems; track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          class="nav-item"
+          [title]="item.label"
+        >
+          <span class="nav-icon">{{ item.icon }}</span>
+          @if (!collapsed()) { <span class="nav-label">{{ item.label }}</span> }
+        </a>
+      }
+    </nav>
+
+    <button class="collapse-btn" (click)="toggleCollapsed()">
+      {{ collapsed() ? '→' : '←' }}
+    </button>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="admin-main">
+    <!-- Top bar -->
+    <div class="admin-topbar">
+      <div class="topbar-left">
+        <span class="topbar-title">Admin</span>
+      </div>
+      <div class="topbar-right">
+        <span class="text-muted text-sm">{{ auth.userFullName() }}</span>
+        <a routerLink="/" class="btn btn-ghost btn-sm">← Siteye Dön</a>
+      </div>
+    </div>
+
+    <!-- Page Content -->
+    <div class="admin-content">
+      <router-outlet />
+    </div>
+  </div>
+</div>

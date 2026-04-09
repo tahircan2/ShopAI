@@ -1,0 +1,233 @@
+<div class="confirm-page container">
+
+  @if (loading()) {
+  <div class="loading-state">
+    <div class="spinner" style="width:40px;height:40px;border-width:3px"></div>
+    <p class="text-muted" style="margin-top:16px">Sipariş bilgileri yükleniyor...</p>
+  </div>
+  } @else if (!order()) {
+  <div class="error-state">
+    <div style="font-size:48px;margin-bottom:16px">❌</div>
+    <h3>Sipariş Bulunamadı</h3>
+    <p class="text-muted" style="margin-top:8px">Sipariş numarası geçersiz veya erişim yetkiniz yok.</p>
+    <a routerLink="/orders" class="btn btn-primary" style="margin-top:20px">Siparişlerime Git</a>
+  </div>
+  } @else {
+  <!-- Dynamic Header based on Order Status -->
+  <div class="success-header">
+    @if (order()!.status === 'PENDING' || order()!.status === 'CONFIRMED') {
+      <div class="success-circle">
+        <div class="success-check">✓</div>
+        <div class="success-ring ring-1"></div>
+        <div class="success-ring ring-2"></div>
+      </div>
+      <h1 class="success-title">Siparişiniz Alındı!</h1>
+      <p class="success-subtitle text-muted">Teşekkürler! Siparişiniz başarıyla oluşturuldu ve işleme alındı.</p>
+    } @else if (order()!.status === 'DELIVERED') {
+      <div class="success-circle" style="background:var(--success);border-color:var(--success)">
+        <div class="success-check">🏠</div>
+      </div>
+      <h1 class="success-title">Teslim Edildi</h1>
+      <p class="success-subtitle text-muted">Siparişiniz teslim edilmiştir. Bizi tercih ettiğiniz için teşekkürler!</p>
+    } @else if (order()!.status === 'SHIPPED') {
+      <div class="success-circle" style="background:var(--primary);border-color:var(--primary)">
+        <div class="success-check">📦</div>
+      </div>
+      <h1 class="success-title">Sipariş Kargoda</h1>
+      <p class="success-subtitle text-muted">Siparişiniz kargoya verilmiştir ve yoldadır.</p>
+    } @else {
+      <h1 class="success-title">Sipariş Detayı</h1>
+      <p class="success-subtitle text-muted">Sipariş numarası: {{ order()!.orderNumber }}</p>
+    }
+  </div>
+
+  <div class="confirm-grid">
+    <!-- Left Column -->
+    <div class="confirm-main">
+
+      <!-- Order Number Card -->
+      <div class="info-card">
+        <div class="card-title">Sipariş Numarası</div>
+        <div class="order-number-row">
+          <span class="order-num">{{ order()!.orderNumber }}</span>
+          <button class="copy-btn" (click)="copyOrderNumber()" [class.copied]="copied()">
+            @if (copied()) {
+              ✓ Kopyalandı
+            } @else {
+              📋 Kopyala
+            }
+          </button>
+        </div>
+        <div class="meta-row">
+          <span class="text-muted text-sm">Sipariş Tarihi:</span>
+          <span class="text-sm">{{ order()!.createdAt | date:'dd MMM yyyy, HH:mm' }}</span>
+        </div>
+        @if (estimatedDelivery()) {
+        <div class="meta-row">
+          <span class="text-muted text-sm">Tahmini Teslimat:</span>
+          <span class="text-sm text-success">{{ estimatedDelivery() | date:'dd MMM yyyy' }}</span>
+        </div>
+        }
+      </div>
+
+      <!-- Status Timeline -->
+      <div class="info-card">
+        <div class="card-title">Sipariş Durumu</div>
+        @if (order()!.status === 'CANCELLED') {
+        <div class="cancelled-alert">❌ Bu sipariş iptal edilmiştir.</div>
+        } @else if (order()!.status === 'REFUNDED') {
+        <div class="cancelled-alert" style="color:var(--clr-warning)">🔄 Bu sipariş iade edilmiştir.</div>
+        } @else {
+        <div class="timeline">
+          @for (step of statusSteps; track step.key; let i = $index) {
+          <div class="timeline-step" [class.done]="i <= currentStatusIndex()" [class.active]="i === currentStatusIndex()">
+            <div class="step-icon-wrap">
+              <div class="step-icon">{{ step.icon }}</div>
+              @if (i < statusSteps.length - 1) {
+              <div class="step-connector" [class.filled]="i < currentStatusIndex()"></div>
+              }
+            </div>
+            <div class="step-info">
+              <div class="step-label">{{ step.label }}</div>
+              @if (i === currentStatusIndex()) {
+              <div class="step-current text-xs text-primary">Mevcut Durum</div>
+              }
+            </div>
+          </div>
+          }
+        </div>
+        }
+
+        <!-- Tracking -->
+        @if (order()!.shippedAt) {
+        <div class="tracking-box">
+          <div class="tracking-label">📦 Kargo Takip</div>
+          <div class="tracking-info text-sm text-muted">
+            Kargoya verilme tarihi: {{ order()!.shippedAt | date:'dd MMM yyyy' }}
+          </div>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px">Kargo Takip Et</button>
+        </div>
+        }
+      </div>
+
+      <!-- Order Items -->
+      <div class="info-card">
+        <div class="card-title">Sipariş Edilen Ürünler</div>
+        <div class="items-list">
+          @for (item of order()!.items; track item.id) {
+          <div class="order-item">
+            <div class="item-img">
+              @if (item.primaryImageUrl) {
+              <img [src]="item.primaryImageUrl" [alt]="item.productName" />
+              } @else {
+              <div class="img-ph">📦</div>
+              }
+            </div>
+            <div class="item-info">
+              <div class="item-name">{{ item.productName }}</div>
+              @if (item.productSku) {
+              <div class="text-xs text-dim">SKU: {{ item.productSku }}</div>
+              }
+            </div>
+            <div class="item-qty text-muted text-sm">x{{ item.quantity }}</div>
+            <div class="item-price">{{ item.totalPrice | currencyFormat }}</div>
+          </div>
+          }
+        </div>
+
+        <!-- Totals -->
+        <div class="totals">
+          <div class="total-row">
+            <span class="text-muted text-sm">Ara Toplam</span>
+            <span>{{ order()!.subtotal | currencyFormat }}</span>
+          </div>
+          @if (order()!.discountAmount > 0) {
+          <div class="total-row text-success">
+            <span class="text-sm">İndirim</span>
+            <span>-{{ order()!.discountAmount | currencyFormat }}</span>
+          </div>
+          }
+          <div class="total-row">
+            <span class="text-muted text-sm">Kargo</span>
+            <span>{{ order()!.shippingCost === 0 ? 'Ücretsiz' : (order()!.shippingCost | currencyFormat) }}</span>
+          </div>
+          <div class="total-row">
+            <span class="text-muted text-sm">KDV</span>
+            <span>{{ order()!.taxAmount | currencyFormat }}</span>
+          </div>
+          <div class="total-divider"></div>
+          <div class="total-row grand">
+            <span>Toplam</span>
+            <span>{{ order()!.totalAmount | currencyFormat }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="confirm-sidebar">
+
+      <!-- Shipping Address -->
+      <div class="info-card">
+        <div class="card-title">Teslimat Adresi</div>
+        <div class="address-block">
+          <div class="addr-name">{{ order()!.shippingAddress.fullName }}</div>
+          <div class="addr-line text-sm text-muted">{{ order()!.shippingAddress.addressLine1 }}</div>
+          @if (order()!.shippingAddress.addressLine2) {
+          <div class="addr-line text-sm text-muted">{{ order()!.shippingAddress.addressLine2 }}</div>
+          }
+          <div class="addr-line text-sm text-muted">{{ order()!.shippingAddress.district }}, {{ order()!.shippingAddress.city }}</div>
+          @if (order()!.shippingAddress.postalCode) {
+          <div class="addr-line text-sm text-muted">{{ order()!.shippingAddress.postalCode }}</div>
+          }
+          <div class="addr-line text-sm text-muted">{{ order()!.shippingAddress.country }}</div>
+          @if (order()!.shippingAddress.phone) {
+          <div class="addr-phone text-sm text-muted" style="margin-top:8px">☎ {{ order()!.shippingAddress.phone }}</div>
+          }
+        </div>
+      </div>
+
+      <!-- Payment -->
+      <div class="info-card">
+        <div class="card-title">Ödeme Bilgisi</div>
+        <div class="payment-row">
+          <span class="text-muted text-sm">Yöntem</span>
+          <span class="text-sm">
+            @if (order()!.paymentMethod === 'CREDIT_CARD') { 💳 Kredi Kartı }
+            @else if (order()!.paymentMethod === 'BANK_TRANSFER') { 🏦 Havale/EFT }
+            @else if (order()!.paymentMethod === 'CASH_ON_DELIVERY') { 💵 Kapıda Ödeme }
+            @else { {{ order()!.paymentMethod }} }
+          </span>
+        </div>
+        <div class="payment-row">
+          <span class="text-muted text-sm">Ödeme Durumu</span>
+          @if (order()!.paymentStatus === 'PAID') {
+          <span class="badge badge-success">Ödendi</span>
+          } @else if (order()!.paymentStatus === 'PENDING') {
+          <span class="badge badge-warning">Bekliyor</span>
+          } @else {
+          <span class="badge badge-muted">{{ order()!.paymentStatus }}</span>
+          }
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions-card">
+        <a routerLink="/orders" class="btn btn-primary btn-full">
+          Siparişlerime Git
+        </a>
+        <a routerLink="/products" class="btn btn-ghost btn-full" style="margin-top:10px">
+          Alışverişe Devam Et
+        </a>
+      </div>
+
+      <!-- Trust Badges -->
+      <div class="trust-badges">
+        <div class="trust-item">🔒 Güvenli Alışveriş</div>
+        <div class="trust-item">🔄 14 Gün İade</div>
+        <div class="trust-item">📦 Hızlı Kargo</div>
+      </div>
+    </div>
+  </div>
+  }
+</div>
