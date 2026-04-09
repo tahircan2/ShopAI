@@ -36,14 +36,38 @@
       <!-- Category -->
       <div class="filter-group">
         <div class="filter-title">Kategori</div>
-        @for (cat of categories(); track cat.id) {
-        <label class="filter-option">
-          <input type="radio" name="category" [value]="cat.slug" [(ngModel)]="filter.categorySlug" />
-          <span>{{ cat.name }}</span>
-        </label>
-        }
+        
+        <div class="category-tree">
+          <ng-container *ngTemplateOutlet="categoryList; context: { $implicit: categories(), depth: 0 }"></ng-container>
+        </div>
+
+        <ng-template #categoryList let-cats let-depth="depth">
+          @for (cat of cats; track cat.id) {
+            <div class="category-item" [style.padding-left.px]="depth * 16">
+              <div class="category-row" [class.active]="filter.categorySlug === cat.slug">
+                <div class="category-main" (click)="onCategorySelect(cat.slug)">
+                  @if (filter.categorySlug === cat.slug) {
+                    <span class="category-dot"></span>
+                  }
+                  <span class="category-name">{{ cat.name }}</span>
+                </div>
+                @if (cat.children && cat.children.length > 0) {
+                  <button class="expand-btn" (click)="toggleCategory(cat.id, $event)">
+                    {{ isExpanded(cat.id) ? '−' : '+' }}
+                  </button>
+                }
+              </div>
+              @if (cat.children && cat.children.length > 0 && isExpanded(cat.id)) {
+                <div class="category-children">
+                  <ng-container *ngTemplateOutlet="categoryList; context: { $implicit: cat.children, depth: depth + 1 }"></ng-container>
+                </div>
+              }
+            </div>
+          }
+        </ng-template>
+
         @if (filter.categorySlug) {
-        <button class="btn-link" (click)="filter.categorySlug = undefined; applyFilters()">Temizle</button>
+          <button class="btn-link" style="margin-top: 10px" (click)="onCategorySelect(undefined)">Tüm Ürünleri Göster</button>
         }
       </div>
 

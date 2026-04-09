@@ -96,7 +96,7 @@
 
       <!-- Size Variants -->
       @if (sizeOptions().length > 0) {
-      <div class="variant-group">
+      <div id="size-selection" class="variant-group" [class.highlight]="highlightSize()">
         <div class="variant-label">Beden: <strong>{{ selectedSize() ?? 'Seçilmedi' }}</strong></div>
         <div class="size-options">
           @for (s of sizeOptions(); track s) {

@@ -37,9 +37,9 @@ async function run() {
   console.log('Cookies after login:', cookies);
 
   for (let i = 1; i <= 6; i++) {
-    const cookieHeader = Object.entries(cookies).map(([k,v]) => `${k}=${v}`).join('; ');
+    const cookieHeader = Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; ');
     const xsrf = cookies['XSRF-TOKEN'] || '';
-    console.log(`\n=== STEP ${i+1}: POST /api/cart/items (XSRF=${xsrf.substring(0,8)}...) ===`);
+    console.log(`\n=== STEP ${i + 1}: POST /api/cart/items (XSRF=${xsrf.substring(0, 8)}...) ===`);
 
     let r = await request({
       hostname: 'localhost', port: 8080, path: '/api/cart/items', method: 'POST',

@@ -189,6 +189,21 @@
 
 .variant-group {
   margin-bottom: 20px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  transition: all 0.3s ease;
+
+  &.highlight {
+    background: rgba(124, 111, 247, 0.05);
+    box-shadow: 0 0 0 2px var(--clr-primary);
+    animation: pulse-highlight 1.5s infinite;
+  }
+}
+
+@keyframes pulse-highlight {
+  0% { box-shadow: 0 0 0 2px var(--clr-primary); }
+  50% { box-shadow: 0 0 0 6px rgba(124, 111, 247, 0.3); }
+  100% { box-shadow: 0 0 0 2px var(--clr-primary); }
 }
 
 .variant-label {

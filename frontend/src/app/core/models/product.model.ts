@@ -91,6 +91,7 @@ export interface ProductSummary {
   categoryId?: number;
   categoryName?: string;
   categorySlug?: string;
+  hasVariants?: boolean;
 }
 
 export interface ProductFilter {

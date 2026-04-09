@@ -32,6 +32,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final AddressRepository addressRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final CouponRepository couponRepository;
     private final CartService cartService;
     private final NotificationService notificationService;
@@ -69,6 +70,17 @@ public class OrderService {
             int updated = productRepository.decrementStock(product.getId(), cartItem.getQuantity());
             if (updated == 0) {
                 throw new StockException(product.getName(), cartItem.getQuantity(), product.getStockQuantity());
+            }
+
+            // Eğer varyant varsa onun da stoğunu düşür
+            if (cartItem.getVariant() != null) {
+                int variantUpdated = productVariantRepository.decrementStock(cartItem.getVariant().getId(), cartItem.getQuantity());
+                if (variantUpdated == 0) {
+                    // Ana ürün stoğunu geri al (rollback manuel simülasyonu - başarılıysa devam eder)
+                    productRepository.incrementStock(product.getId(), cartItem.getQuantity());
+                    throw new StockException(product.getName() + " (" + cartItem.getVariant().getSize() + "/" + cartItem.getVariant().getColor() + ")", 
+                        cartItem.getQuantity(), cartItem.getVariant().getStockQuantity());
+                }
             }
 
             // Sipariş anındaki fiyat snapshot (price_at_add)
@@ -175,6 +187,9 @@ public class OrderService {
         order.getItems().forEach(item -> {
             if (item.getProduct() != null) {
                 productRepository.incrementStock(item.getProduct().getId(), item.getQuantity());
+            }
+            if (item.getVariantId() != null) {
+                productVariantRepository.incrementStock(item.getVariantId(), item.getQuantity());
             }
         });
 

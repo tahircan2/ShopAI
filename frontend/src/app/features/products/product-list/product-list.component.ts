@@ -1,6 +1,7 @@
 import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { RouterLink, ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { ProductService } from '../../../core/services/product.service';
 import { CartService } from '../../../core/services/cart.service';
 import { ToastService } from '../../../core/services/toast.service';
@@ -12,7 +13,7 @@ import { PaginationComponent } from '../../../shared/components/pagination/pagin
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, CurrencyFormatPipe, PaginationComponent],
+  imports: [CommonModule, RouterLink, FormsModule, CurrencyFormatPipe, PaginationComponent],
   templateUrl: './product-list.component.html',
   styleUrl: './product-list.component.scss'
 })
@@ -31,6 +32,7 @@ export class ProductListComponent implements OnInit {
   readonly totalElements = signal(0);
   readonly totalPages = signal(1);
   readonly currentPage = signal(0);
+  readonly expandedCategories = signal<Set<number>>(new Set());
 
   readonly Math = Math;
 
@@ -42,7 +44,10 @@ export class ProductListComponent implements OnInit {
   );
 
   ngOnInit(): void {
-    this.productService.getCategories().subscribe(c => this.categories.set(c));
+    this.productService.getCategories().subscribe(c => {
+      this.categories.set(c);
+      this.autoExpandActiveCategory();
+    });
 
     // Reactively listen to query params so search from navbar updates the list
     this.route.queryParamMap.subscribe(params => {
@@ -50,10 +55,53 @@ export class ProductListComponent implements OnInit {
       const categorySlug = params.get('categorySlug');
       this.filter = { page: 0, size: 9 };
       if (q) { this.filter.q = q; }
-      if (categorySlug) { this.filter.categorySlug = categorySlug; }
+      if (categorySlug) { 
+        this.filter.categorySlug = categorySlug;
+        this.autoExpandActiveCategory();
+      }
       this.currentPage.set(0);
       this.loadProducts();
     });
+  }
+
+  private autoExpandActiveCategory(): void {
+    const slug = this.filter.categorySlug;
+    if (!slug) return;
+
+    const findAndExpand = (cats: Category[]): boolean => {
+      for (const cat of cats) {
+        if (cat.slug === slug) return true;
+        if (cat.children && cat.children.length > 0) {
+          if (findAndExpand(cat.children)) {
+            this.toggleCategory(cat.id); // Expand parent if child is active
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    findAndExpand(this.categories());
+  }
+
+  toggleCategory(id: number, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    const set = new Set(this.expandedCategories());
+    if (set.has(id)) set.delete(id);
+    else set.add(id);
+    this.expandedCategories.set(set);
+  }
+
+  isExpanded(id: number): boolean {
+    return this.expandedCategories().has(id);
+  }
+
+  onCategorySelect(slug: string | undefined): void {
+    this.filter.categorySlug = slug;
+    this.applyFilters();
   }
 
   loadProducts(): void {
@@ -107,6 +155,12 @@ export class ProductListComponent implements OnInit {
     if (!this.auth.isLoggedIn()) {
       this.toast.info('Sepete eklemek için giriş yapınız.');
       this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    if (p.hasVariants) {
+      this.toast.info('Lütfen ürün seçeneklerini seçiniz.');
+      this.router.navigate(['/products', p.slug], { queryParams: { focus: 'size' } });
       return;
     }
 

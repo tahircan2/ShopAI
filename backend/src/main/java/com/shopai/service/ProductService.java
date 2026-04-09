@@ -38,6 +38,23 @@ public class ProductService {
     // ─── Ürün Listesi (filtreli, sayfalı) ───────────────────────────────────
     @Transactional(readOnly = true)
     public Page<ProductSummaryResponse> getProducts(ProductFilterRequest filter) {
+        // Resolve category hierarchy if necessary
+        if (filter.getCategorySlug() != null || filter.getCategoryId() != null) {
+            Category baseCategory = null;
+            if (filter.getCategoryId() != null) {
+                baseCategory = categoryRepository.findById(filter.getCategoryId()).orElse(null);
+            } else if (filter.getCategorySlug() != null && !filter.getCategorySlug().isBlank()) {
+                String slug = filter.getCategorySlug().trim().toLowerCase();
+                baseCategory = categoryRepository.findBySlug(slug).orElse(null);
+            }
+
+            if (baseCategory != null) {
+                java.util.List<Long> allIds = new java.util.ArrayList<>();
+                collectCategoryIds(baseCategory, allIds);
+                filter.setCategoryIds(allIds);
+            }
+        }
+
         Pageable pageable = PageRequest.of(
                 filter.getPage() != null ? filter.getPage() : 0,
                 filter.getSize() != null ? Math.min(filter.getSize(), 50) : 20
@@ -283,5 +300,21 @@ public class ProductService {
                 .replaceAll("\\s+", "-")
                 .replaceAll("-+", "-");
         return normalized + "-" + System.currentTimeMillis();
+    }
+
+    private void collectCategoryIds(Category category, java.util.List<Long> ids) {
+        if (category == null) return;
+        
+        ids.add(category.getId());
+        
+        // Use a more defensive check for children to avoid lazy loading issues if possible
+        List<Category> children = category.getChildren();
+        if (children != null && !children.isEmpty()) {
+            for (Category child : children) {
+                if (child != null && Boolean.TRUE.equals(child.getIsActive())) {
+                    collectCategoryIds(child, ids);
+                }
+            }
+        }
     }
 }

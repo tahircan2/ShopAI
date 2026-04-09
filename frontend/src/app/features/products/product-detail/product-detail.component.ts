@@ -41,6 +41,7 @@ export class ProductDetailComponent implements OnInit {
   readonly selectedColor = signal<string | null>(null);
   readonly selectedSize = signal<string | null>(null);
   readonly qty = signal(1);
+  readonly highlightSize = signal(false);
   readonly detailTab = signal<'desc' | 'reviews'>('desc');
 
   readonly hasUserReviewed = computed(() => {
@@ -119,6 +120,33 @@ export class ProductDetailComponent implements OnInit {
         this.product.set(p);
         this.loading.set(false);
         this.loadReviews(p.id);
+
+        // Seçecekleri URL'den veya varsayılanlardan al
+        const qp = this.route.snapshot.queryParamMap;
+        const color = qp.get('color');
+        const size = qp.get('size');
+
+        if (color) {
+          this.selectedColor.set(color);
+        } else if (this.colorOptions().length > 0) {
+          this.selectedColor.set(this.colorOptions()[0].color ?? null);
+        }
+
+        if (size) {
+          this.selectedSize.set(size);
+        }
+
+        const focus = qp.get('focus');
+        if (focus === 'size') {
+          this.highlightSize.set(true);
+          setTimeout(() => {
+            const el = document.getElementById('size-selection');
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 300);
+          setTimeout(() => this.highlightSize.set(false), 3000);
+        }
       },
       error: () => this.loading.set(false)
     });
@@ -168,6 +196,13 @@ export class ProductDetailComponent implements OnInit {
     }
     const p = this.product();
     if (!p) return;
+
+    // Beden seçeneği varsa seçilmesi zorunlu olsun
+    if (this.sizeOptions().length > 0 && !this.selectedSize()) {
+      this.toast.warning('Lütfen bir beden seçiniz.');
+      return;
+    }
+
     this.addingToCart.set(true);
     this.cartService.addToCart({
       productId: p.id,

@@ -86,6 +86,7 @@ public class ProductResponses {
         private Long categoryId;
         private String categoryName;
         private String categorySlug;
+        private Boolean hasVariants;
 
         public static ProductSummaryResponse from(Product p) {
             String primaryImg = p.getImages().stream()
@@ -115,6 +116,7 @@ public class ProductResponses {
                     .categoryId(p.getCategory() != null ? p.getCategory().getId() : null)
                     .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)
                     .categorySlug(p.getCategory() != null ? p.getCategory().getSlug() : null)
+                    .hasVariants(p.getVariants() != null && !p.getVariants().isEmpty())
                     .build();
         }
     }

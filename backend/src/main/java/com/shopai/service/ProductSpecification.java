@@ -29,18 +29,22 @@ public class ProductSpecification {
                 ));
             }
 
-            // Kategori slug filtresi — explicit LEFT JOIN kullan, implicit join INNER JOIN yapar ve
-            // kategorisi null olan ürünleri sonuçtan çıkarır. Hem slug hem id filtresini
-            // tek bir join üzerinden yönet.
-            boolean hasCatSlug = filter.getCategorySlug() != null && !filter.getCategorySlug().isBlank();
-            boolean hasCatId   = filter.getCategoryId() != null;
-            if (hasCatSlug || hasCatId) {
-                Join<Product, Category> catJoin = root.join("category", JoinType.LEFT);
-                if (hasCatSlug) {
-                    predicates.add(cb.equal(catJoin.get("slug"), filter.getCategorySlug()));
-                }
-                if (hasCatId) {
-                    predicates.add(cb.equal(catJoin.get("id"), filter.getCategoryId()));
+            // Kategori filtresi — Recursive destekli
+            if (filter.getCategoryIds() != null && !filter.getCategoryIds().isEmpty()) {
+                // Direct ID search is safer and more efficient
+                predicates.add(root.get("category").get("id").in(filter.getCategoryIds()));
+            } else {
+                boolean hasCatSlug = filter.getCategorySlug() != null && !filter.getCategorySlug().isBlank();
+                boolean hasCatId   = filter.getCategoryId() != null;
+                
+                if (hasCatSlug || hasCatId) {
+                    Join<Product, Category> catJoin = root.join("category", JoinType.INNER);
+                    if (hasCatSlug) {
+                        predicates.add(cb.equal(cb.lower(catJoin.get("slug")), filter.getCategorySlug().trim().toLowerCase()));
+                    }
+                    if (hasCatId) {
+                        predicates.add(cb.equal(catJoin.get("id"), filter.getCategoryId()));
+                    }
                 }
             }
 
