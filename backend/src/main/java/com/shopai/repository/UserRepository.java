@@ -25,7 +25,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Page<User> searchUsers(@Param("search") String search, @Param("role") User.Role role, Pageable pageable);
 
     Optional<User> findByEmailVerifyToken(String token);
-    Optional<User> findByPasswordResetToken(String token);
+    /**
+     * Finds a user by the SHA-256 hash of their password reset token.
+     * Using a hash allows O(1) indexed lookup instead of scanning all users.
+     */
+    Optional<User> findByPasswordResetTokenHash(String tokenHash);
 
     @Modifying
     @Query("UPDATE User u SET u.failedLoginAttempts = 0, u.lockedUntil = null WHERE u.id = :id")

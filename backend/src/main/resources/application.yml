@@ -18,7 +18,7 @@ spring:
     baseline-on-migrate: true
     baseline-version: 6
     out-of-order: true
-    clean-disabled: false
+    clean-disabled: true   # IMPORTANT: never allow Flyway to wipe the database
   jpa:
     open-in-view: false
     hibernate:
@@ -49,6 +49,8 @@ spring:
 
 server:
   port: 8080
+  # Trust X-Forwarded-For only when Spring itself parses it (prevents IP spoofing)
+  forward-headers-strategy: FRAMEWORK
   error:
     include-message: never
     include-stacktrace: never
@@ -57,13 +59,13 @@ server:
 app:
   jwt:
     secret: ${JWT_SECRET}
-    access-expiration: 3600000       # 1 saat (ms)
+    access-expiration: 900000        # 15 dakika (ms) — güvenlik standardı
     refresh-expiration: 604800000   # 7 gün (ms)
 
   cookie:
     secure: false     # Dev: false, Prod: true (HTTPS gerektirir)
     same-site: Strict
-    domain: ${COOKIE_DOMAIN:localhost}
+    domain: ${COOKIE_DOMAIN:}  # Boş bırakılırsa tarayıcı mevcut host'u kullanır
 
   ai-service:
     url: ${AI_SERVICE_URL:http://localhost:8000}
@@ -97,6 +99,7 @@ management:
 logging:
   level:
     com.shopai: INFO
-    org.springframework.security: DEBUG
-    org.springframework.security.web.csrf: TRACE
+    # Güvenlik logları sadece yerel debug amacıyla:
+    # org.springframework.security: DEBUG
+    # org.springframework.security.web.csrf: TRACE
     org.hibernate.SQL: WARN

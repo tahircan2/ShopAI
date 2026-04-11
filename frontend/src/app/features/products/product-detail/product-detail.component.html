@@ -166,7 +166,7 @@
     @if (detailTab() === 'desc') {
     <div class="tab-content fade-in">
       @if (product()!.longDescription) {
-      <div class="long-desc" [innerHTML]="product()!.longDescription"></div>
+      <div class="long-desc" [innerHTML]="product()!.longDescription | safeHtml"></div>
       } @else if (product()!.description) {
       <p>{{ product()!.description }}</p>
       } @else {

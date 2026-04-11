@@ -203,14 +203,15 @@ public class AuthService {
     public MessageResponse forgotPassword(ForgotPasswordRequest req) {
         userRepository.findByEmail(req.getEmail().toLowerCase()).ifPresent(user -> {
             String rawToken = UUID.randomUUID().toString();
-            // Bcrypt ile hash'le — plaintext asla saklanmaz
-            user.setPasswordResetToken(passwordEncoder.encode(rawToken));
-            user.setPasswordResetExpires(LocalDateTime.now().plusHours(passwordResetExpiryHours));
-            userRepository.save(user);
-            emailService.sendPasswordReset(user.getEmail(), rawToken);
-        });
-        // Kullanıcı bulunsun veya bulunmasın aynı mesajı dön — enumeration saldırısını önler
-        return new MessageResponse("Şifre sıfırlama linki e-postanıza gönderildi.");
+        // Token'lı SHA-256 hash olarak sakla — plaintext asla saklanmaz
+        String tokenHash = sha256(rawToken);
+        user.setPasswordResetTokenHash(tokenHash);
+        user.setPasswordResetExpires(LocalDateTime.now().plusHours(passwordResetExpiryHours));
+        userRepository.save(user);
+        emailService.sendPasswordReset(user.getEmail(), rawToken);
+    });
+    // Kullanıcı bulunsun veya bulunmasın aynı mesajı dön — enumeration saldırısını önler
+    return new MessageResponse("Şifre sıfırlama linki e-postanıza gönderildi.");
     }
 
     // ────────────────────────────────────────────────
@@ -218,18 +219,15 @@ public class AuthService {
     // ────────────────────────────────────────────────
     @Transactional
     public MessageResponse resetPassword(ResetPasswordRequest req) {
-        // Token'ı bcrypt ile doğrula — tüm kullanıcıları tara
-        // Not: Production'da token'ı DB'de SHA-256 hash olarak saklamak daha verimlidir
-        User user = userRepository.findAll().stream()
-                .filter(u -> u.getPasswordResetToken() != null
-                        && u.getPasswordResetExpires() != null
-                        && LocalDateTime.now().isBefore(u.getPasswordResetExpires())
-                        && passwordEncoder.matches(req.getToken(), u.getPasswordResetToken()))
-                .findFirst()
+        // Token SHA-256 hash olarak saklanır — tek sorguda bulunur, tüm tablo taranır
+        String tokenHash = sha256(req.getToken());
+        User user = userRepository.findByPasswordResetTokenHash(tokenHash)
+                .filter(u -> u.getPasswordResetExpires() != null
+                        && LocalDateTime.now().isBefore(u.getPasswordResetExpires()))
                 .orElseThrow(() -> new InvalidTokenException("Geçersiz veya süresi dolmuş sıfırlama tokeni"));
 
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
-        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenHash(null);
         user.setPasswordResetExpires(null);
         userRepository.save(user);
 

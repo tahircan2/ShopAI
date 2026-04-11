@@ -9,11 +9,12 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Product, ProductVariant, Review } from '../../../core/models/product.model';
 import { CurrencyFormatPipe } from '../../../shared/pipes/shared-pipes';
+import { SafeHtmlPipe } from '../../../shared/pipes/safe-html.pipe';
 
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, DatePipe, CurrencyFormatPipe],
+  imports: [RouterLink, ReactiveFormsModule, DatePipe, CurrencyFormatPipe, SafeHtmlPipe],
   templateUrl: './product-detail.component.html',
   styleUrl: './product-detail.component.scss'
 })

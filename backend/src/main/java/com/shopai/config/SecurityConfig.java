@@ -1,6 +1,7 @@
 package com.shopai.config;
 
 
+import com.shopai.security.CsrfCookieFilter;
 import com.shopai.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +23,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import com.shopai.security.PersistentCookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
+import org.springframework.security.web.csrf.CsrfFilter;
 
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -88,6 +90,10 @@ public class SecurityConfig {
 
                 // JWT filter'ı UsernamePasswordAuthenticationFilter'dan önce ekle
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // CsrfCookieFilter — her response'ta XSRF-TOKEN cookie'sini yazar
+                // (Spring Security 6 lazy token üretir; bu filter tetiklemeyi zorlar)
+                .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
 
 
                 // Exception handling

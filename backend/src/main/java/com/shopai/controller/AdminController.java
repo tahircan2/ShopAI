@@ -105,10 +105,15 @@ public class AdminController {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", id));
         String role = body.get("role");
-        if (role != null) {
-            user.setRole(User.Role.valueOf(role));
-            return ResponseEntity.ok(UserInfo.from(userRepository.save(user)));
+        if (role == null || role.isBlank()) {
+            return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.badRequest().build();
+        try {
+            user.setRole(User.Role.valueOf(role.toUpperCase().trim()));
+        } catch (IllegalArgumentException e) {
+            // Invalid role string — 400 instead of 500
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(UserInfo.from(userRepository.save(user)));
     }
 }

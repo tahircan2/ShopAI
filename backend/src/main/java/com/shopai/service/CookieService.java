@@ -17,6 +17,9 @@ public class CookieService {
     @Value("${app.cookie.same-site}")
     private String sameSite;
 
+    @Value("${app.cookie.domain:}")
+    private String cookieDomain; // Boş string: tarayıcı mevcut host'u kullanır
+
     @Value("${app.jwt.access-expiration}")
     private long accessExpiration;
 
@@ -24,16 +27,28 @@ public class CookieService {
     private long refreshExpiration;
 
     /**
+     * Domain ayarı yoksa (boş string) ResponseCookie'ye domain set etmez.
+     * Bu durumda tarayıcı mevcut request host'unu kullanır (en güvenli davranış).
+     */
+    private ResponseCookie.ResponseCookieBuilder applyDomain(ResponseCookie.ResponseCookieBuilder builder) {
+        if (cookieDomain != null && !cookieDomain.isBlank()) {
+            builder.domain(cookieDomain);
+        }
+        return builder;
+    }
+
+    /**
      * Access token cookie — HttpOnly; Secure; SameSite=Strict; Path=/api
      * JS ile document.cookie üzerinden erişilemez — XSS koruması
      */
     public void setAccessTokenCookie(HttpServletResponse response, String token) {
-        ResponseCookie cookie = ResponseCookie.from("access_token", token)
-                .httpOnly(true)
-                .secure(secure)
-                .sameSite(sameSite)
-                .path("/api")
-                .maxAge(accessExpiration / 1000) // ms → saniye
+        ResponseCookie cookie = applyDomain(
+                ResponseCookie.from("access_token", token)
+                        .httpOnly(true)
+                        .secure(secure)
+                        .sameSite(sameSite)
+                        .path("/api")
+                        .maxAge(accessExpiration / 1000))
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
     }
@@ -43,12 +58,13 @@ public class CookieService {
      * Path=/api/auth/refresh ile yalnızca ilgili endpoint'e gider
      */
     public void setRefreshTokenCookie(HttpServletResponse response, String token) {
-        ResponseCookie cookie = ResponseCookie.from("refresh_token", token)
-                .httpOnly(true)
-                .secure(secure)
-                .sameSite(sameSite)
-                .path("/api/auth/refresh")
-                .maxAge(refreshExpiration / 1000)
+        ResponseCookie cookie = applyDomain(
+                ResponseCookie.from("refresh_token", token)
+                        .httpOnly(true)
+                        .secure(secure)
+                        .sameSite(sameSite)
+                        .path("/api/auth/refresh")
+                        .maxAge(refreshExpiration / 1000))
                 .build();
         response.addHeader("Set-Cookie", cookie.toString());
     }

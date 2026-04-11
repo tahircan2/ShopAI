@@ -18,7 +18,7 @@ import java.util.List;
             @Index(name = "idx_users_email", columnList = "email"),
             @Index(name = "idx_users_locked_until", columnList = "locked_until"),
             @Index(name = "idx_users_email_verify_token", columnList = "email_verify_token"),
-            @Index(name = "idx_users_password_reset_token", columnList = "password_reset_token")
+            @Index(name = "idx_users_password_reset_token_hash", columnList = "password_reset_token_hash")
         })
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class User {
@@ -58,8 +58,13 @@ public class User {
     @Column(name = "email_verify_token", length = 255)
     private String emailVerifyToken;
 
-    @Column(name = "password_reset_token", length = 255)
-    private String passwordResetToken;
+    /**
+     * SHA-256 hash of the raw password reset token.
+     * The plaintext token is sent via email and never stored.
+     * Indexed for O(1) lookup — replaces bcrypt-based full-table scan.
+     */
+    @Column(name = "password_reset_token_hash", length = 64)
+    private String passwordResetTokenHash;
 
     @Column(name = "password_reset_expires")
     private LocalDateTime passwordResetExpires;

@@ -1,11 +1,9 @@
 import { HttpInterceptorFn, HttpRequest, HttpHandlerFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, switchMap, throwError, BehaviorSubject, filter, take } from 'rxjs';
+import { catchError, switchMap, throwError, filter, take } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
-
-let isRefreshing = false;
-const refreshSubject = new BehaviorSubject<boolean | null>(null);
+import { TokenRefreshService } from '../services/token-refresh.service';
 
 export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, next: HttpHandlerFn) => {
   const authService = inject(AuthService);
@@ -25,7 +23,7 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
           req.url.includes('/auth/refresh');
 
         if (expired && !isAuthEndpoint) {
-          return handleTokenRefresh(req, next, authService, toastService);
+          return handleTokenRefresh(req, next, authService, toastService, inject(TokenRefreshService));
         }
       }
 
@@ -42,22 +40,20 @@ function handleTokenRefresh(
   req: HttpRequest<unknown>,
   next: HttpHandlerFn,
   authService: AuthService,
-  toastService: ToastService
+  toastService: ToastService,
+  tokenRefreshService: TokenRefreshService
 ) {
-  if (!isRefreshing) {
-    isRefreshing = true;
-    refreshSubject.next(null);
+  if (!tokenRefreshService.isRefreshing) {
+    tokenRefreshService.startRefresh();
 
     return authService.refreshSession().pipe(
       switchMap(() => {
-        isRefreshing = false;
-        refreshSubject.next(true);
+        tokenRefreshService.markRefreshSuccess();
         // Retry original request — cookie is auto-sent
         return next(req.clone({ withCredentials: true }));
       }),
       catchError(err => {
-        isRefreshing = false;
-        refreshSubject.next(false);
+        tokenRefreshService.markRefreshFailed();
         // Refresh failed — session expired
         authService.handleTokenExpiry();
         return throwError(() => err);
@@ -66,7 +62,7 @@ function handleTokenRefresh(
   }
 
   // Queue pending requests until refresh completes
-  return refreshSubject.pipe(
+  return tokenRefreshService.refreshSubject.pipe(
     filter(done => done !== null), // wait until boolean is emitted
     take(1),
     switchMap(success => {
