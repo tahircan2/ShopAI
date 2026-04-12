@@ -3,25 +3,152 @@
 </div>
 
 @if (loading()) {
-  @for (i of [1,2,3,4,5]; track i) {
-    <div class="skeleton" style="height:44px;border-radius:var(--radius-md);margin-bottom:8px"></div>
-  }
+@for (i of [1,2,3,4,5]; track i) {
+<div class="skeleton" style="height:44px;border-radius:var(--radius-md);margin-bottom:8px"></div>
+}
 } @else {
-  <div class="table-wrap">
-    <table class="data-table">
-      <thead><tr><th>ID</th><th>Aksiyon</th><th>Kullanıcı</th><th>Entity</th><th>IP</th><th>Tarih</th></tr></thead>
-      <tbody>
-        @for (log of logs(); track log.id) {
-          <tr>
-            <td class="text-dim text-xs">#{{ log.id }}</td>
-            <td><span class="badge" [class]="actionBadge(log.action)">{{ log.action }}</span></td>
-            <td class="text-sm text-muted">{{ log.userId ?? 'Anonim' }}</td>
-            <td class="text-xs text-dim">{{ log.entityType }} {{ log.entityId ? '#'+log.entityId : '' }}</td>
-            <td class="text-xs text-dim">{{ log.ipAddress }}</td>
-            <td class="text-xs text-dim">{{ log.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
+<div class="table-wrap">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Aksiyon</th>
+        <th>Kullanıcı</th>
+        <th>Entity</th>
+        <th>IP</th>
+        <th>Tarih</th>
+        <th>İşlemler</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (log of logs(); track log.id) {
+      <tr>
+        <td class="text-dim text-xs">#{{ log.id }}</td>
+        <td><span class="badge" [class]="actionBadge(log.action)">{{ log.action }}</span></td>
+        <td class="text-sm text-muted">{{ log.userId ?? 'Anonim' }}</td>
+        <td class="text-xs text-dim">{{ log.entityType }} {{ log.entityId ? '#'+log.entityId : '' }}</td>
+        <td class="text-xs text-dim">{{ log.ipAddress }}</td>
+        <td class="text-xs text-dim">{{ log.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
+        <td class="text-xs">
+          <button class="btn btn-primary" style="padding: 2px 8px; font-size: 12px" (click)="selectedLog.set(log)">Detay</button>
+        </td>
+      </tr>
+      }
+    </tbody>
+  </table>
+</div>
+<div class="pagination" style="display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-top: 1px solid var(--clr-border);">
+  <span class="text-sm text-dim">Toplam {{ totalPages() }} sayfa, Sayfa {{ page() + 1 }}</span>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-secondary btn-sm" [disabled]="page() === 0" (click)="prevPage()">Önceki</button>
+    <button class="btn btn-secondary btn-sm" [disabled]="page() >= totalPages() - 1" (click)="nextPage()">Sonraki</button>
   </div>
+</div>
+
+<!-- Modal -->
+<div *ngIf="selectedLog()" class="modal-overlay" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000;" (click)="selectedLog.set(null)">
+  <div class="modal-content" style="background: var(--clr-surface); border-radius: var(--radius-lg); width: 850px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.3);" (click)="$event.stopPropagation()">
+    
+    <!-- Header -->
+    <div style="padding: 24px; border-bottom: 1px solid var(--clr-border); display: flex; justify-content: space-between; align-items: center; background: var(--clr-surface-2);">
+      <div>
+        <h3 style="margin: 0; font-size: 1.25rem; display: flex; align-items: center; gap: 12px;">
+          Log Detayları 
+          <span class="badge" [class]="actionBadge(selectedLog().action)">{{ selectedLog().action }}</span>
+          <span class="text-dim text-sm" style="font-weight: normal;">#{{ selectedLog().id }}</span>
+        </h3>
+        <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--clr-text-muted);">{{ selectedLog().createdAt | date:'dd MMMM yyyy, HH:mm:ss' }}</p>
+      </div>
+      <button class="btn btn-ghost" style="padding: 4px 8px; border: none; font-size: 24px; line-height: 1; border-radius: var(--radius-full); cursor: pointer;" (click)="selectedLog.set(null)">&times;</button>
+    </div>
+    
+    <!-- Body -->
+    <div style="padding: 24px; overflow-y: auto; flex: 1;">
+      
+      <!-- Metadata Grid -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; background: var(--clr-bg); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--clr-border);">
+        <div>
+          <p class="text-xs text-muted" style="margin:0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">Kullanıcı ID</p>
+          <div style="font-weight: 500; font-size: 14px">{{ selectedLog().userId || 'Sistem / Anonim' }}</div>
+        </div>
+        <div>
+          <p class="text-xs text-muted" style="margin:0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">Hedef Entity</p>
+          <div style="font-size: 14px; font-family: monospace; background: var(--clr-surface); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--clr-border); display: inline-block;">{{ selectedLog().entityType }} (ID: {{ selectedLog().entityId || 'Yok' }})</div>
+        </div>
+        <div>
+          <p class="text-xs text-muted" style="margin:0 0 4px; text-transform: uppercase; letter-spacing: 0.5px;">IP Adresi</p>
+          <div style="font-size: 14px">{{ selectedLog().ipAddress }}</div>
+        </div>
+      </div>
+      
+      <!-- User Agent -->
+      <div style="margin-bottom: 24px;">
+        <p class="text-xs text-muted" style="margin:0 0 6px; text-transform: uppercase; letter-spacing: 0.5px;">Kullanıcı Ajanı (User Agent)</p>
+        <div style="background: var(--clr-bg); color: var(--clr-text-dim); padding: 12px 16px; border-radius: var(--radius-sm); font-size: 13px; word-break: break-all; border: 1px solid var(--clr-border); font-family: monospace;">
+          {{ selectedLog().userAgent || 'Bilinmiyor' }}
+        </div>
+      </div>
+      
+      <!-- Data Diffs -->
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; min-height: 200px;">
+          
+          <!-- Old Data -->
+          <div style="display: flex; flex-direction: column;">
+            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: var(--clr-text-dim); text-transform: uppercase; letter-spacing: 0.5px; display:flex; align-items:center; gap: 8px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);"></span>
+              Önceki Durum
+            </h4>
+            <div style="flex: 1; background: #0f172a; border-radius: var(--radius-md); border: 1px solid var(--clr-border); position: relative; overflow: hidden;">
+              <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 4px; background: #ef4444;"></div>
+              <pre *ngIf="getParsedData(selectedLog().oldData); else noOld" style="margin: 0; padding: 20px 20px 20px 24px; font-size: 13px; font-family: 'JetBrains Mono', 'Fira Code', monospace; color: #94a3b8; overflow-x: auto; line-height: 1.6;">{{ getParsedData(selectedLog().oldData) | json }}</pre>
+              <ng-template #noOld>
+                <div style="padding: 40px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--clr-text-muted); text-align: center;">
+                  <span style="font-size: 24px; margin-bottom: 8px; opacity: 0.3;">📄</span>
+                  <div style="font-size: 13px; font-style: italic;">Veri değişimi yok veya kayıt bulunamadı.</div>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+
+          <!-- New Data -->
+          <div style="display: flex; flex-direction: column;">
+            <h4 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 600; color: var(--clr-text-dim); text-transform: uppercase; letter-spacing: 0.5px; display:flex; align-items:center; gap: 8px;">
+              <span style="width: 10px; height: 10px; border-radius: 2px; background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);"></span>
+              Yeni Durum
+            </h4>
+            <div style="flex: 1; background: #0f172a; border-radius: var(--radius-md); border: 1px solid var(--clr-border); position: relative; overflow: hidden;">
+              <div style="position: absolute; top: 0; left: 0; bottom: 0; width: 4px; background: #10b981;"></div>
+              <pre *ngIf="getParsedData(selectedLog().newData); else noNew" style="margin: 0; padding: 20px 20px 20px 24px; font-size: 13px; font-family: 'JetBrains Mono', 'Fira Code', monospace; color: #e2e8f0; overflow-x: auto; line-height: 1.6;">{{ getParsedData(selectedLog().newData) | json }}</pre>
+              <ng-template #noNew>
+                <div style="padding: 40px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--clr-text-muted); text-align: center;">
+                  <span style="font-size: 24px; margin-bottom: 8px; opacity: 0.3;">🗑️</span>
+                  <div style="font-size: 13px; font-style: italic;">Veri silindi veya hedef boş.</div>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+          
+        </div>
+
+        <!-- Details Help -->
+        <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: var(--radius-sm); padding: 12px 16px; display: flex; gap: 12px; align-items: center;">
+          <span style="color: #3b82f6; font-size: 18px;">ℹ️</span>
+          <p style="margin: 0; font-size: 12px; color: var(--clr-text-dim);">
+            Bu görünüm sistemdeki fiziksel veritabanı değişimlerini temsil eder. <strong>Önceki Durum</strong> işlemden hemen önceki anlık görüntüyü, <strong>Yeni Durum</strong> ise işlem tamamlandıktan sonraki hali gösterir.
+          </p>
+        </div>
+        
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="padding: 16px 24px; border-top: 1px solid var(--clr-border); background: var(--clr-surface-2); display: flex; justify-content: flex-end;">
+      <button class="btn btn-primary" style="padding: 8px 24px;" (click)="selectedLog.set(null)">Kapat</button>
+    </div>
+    
+  </div>
+</div>
 }

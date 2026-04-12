@@ -75,7 +75,7 @@ export class AdminCouponsComponent implements OnInit {
   }
 
   delete(id: number): void {
-    if (!confirm('Bu kuponu silmek istiyor musunuz?')) return;
+    if (!confirm('Bu kuponu kalıcı olarak silmek istediğinizden emin misiniz?')) return;
     this.productService.deleteCoupon(id).subscribe({
       next: () => { this.coupons.update(cs => cs.filter(c => c.id !== id)); this.toast.success('Kupon silindi.'); },
       error: () => this.toast.error('Silinemedi.')

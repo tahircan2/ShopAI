@@ -48,7 +48,7 @@ public class AiService {
      * 4. Python servisi bu header'a güvenir; başka kaynaktan userId kabul etmez.
      */
     @Transactional
-    public Map<String, Object> chat(ChatRequest req, Long userId, String ip) {
+    public Map<String, Object> chat(ChatRequest req, Long userId, String ip, jakarta.servlet.http.HttpServletRequest request) {
         // Mesaj sanitizasyonu — Spring Boot katmanı
         String sanitizedMessage = sanitizeMessage(req.getMessage());
 
@@ -98,21 +98,29 @@ public class AiService {
         }
 
         // Injection tespiti — audit log
-        boolean injectionDetected = Boolean.TRUE.equals(pythonResponse.get("injectionDetected"));
+        // Not: Python artık camelCase döner (injectionDetected) ama backward-compatible kalıyoruz
+        boolean injectionDetected = Boolean.TRUE.equals(
+                pythonResponse.getOrDefault("injectionDetected",
+                        pythonResponse.get("injection_detected")));
         if (injectionDetected) {
-            auditLogService.log(userId, "INJECTION_DETECTED", "AiConversation",
-                    conversation.getId(), ip, null);
+            // Güvenlik: Ham string'i JSON kolonuna basmak hata vereceği için Map içine alıyoruz
+            Map<String, String> logData = Map.of("blockedResponse", String.valueOf(pythonResponse.get("message")));
+            auditLogService.logWithMap(userId, "INJECTION_DETECTED", "AiConversation",
+                    conversation.getId(), logData, null, ip, request.getHeader("User-Agent"));
             log.warn("Prompt injection detected! userId={}, sessionId={}", userId, req.getSessionId());
         }
 
         // Asistan yanıtını DB'ye kaydet
+        // Backward-compatible: hem camelCase hem snake_case key'leri kontrol et
+        String agentTypeVal = getStringFromMap(pythonResponse, "agentType", "agent_type");
+        String actionTypeVal = getStringFromMap(pythonResponse, "actionType", "action_type");
+
         AiMessage assistantMessage = AiMessage.builder()
                 .conversation(conversation)
                 .role(AiMessage.MessageRole.assistant)
                 .content(String.valueOf(pythonResponse.getOrDefault("message", "")))
-                .agentType(String.valueOf(pythonResponse.getOrDefault("agentType", "")))
-                .actionType(pythonResponse.get("actionType") != null
-                        ? String.valueOf(pythonResponse.get("actionType")) : null)
+                .agentType(agentTypeVal)
+                .actionType(actionTypeVal)
                 .isInjectionDetected(injectionDetected)
                 .build();
         messageRepository.save(assistantMessage);
@@ -120,6 +128,13 @@ public class AiService {
         // Konuşma sayacını güncelle
         conversation.setMessageCount(conversation.getMessageCount() + 1);
         conversationRepository.save(conversation);
+
+        // AI bir aksiyon aldıysa (sepete ekle vs.) bunu audit log'a işle
+        if (actionTypeVal != null && !actionTypeVal.equalsIgnoreCase("none")) {
+            Map<String, Object> actionData = (Map<String, Object>) pythonResponse.get("actionData");
+            auditLogService.logEntityAction(userId, "AI_ACTION_" + actionTypeVal.toUpperCase(), 
+                    null, actionData, "AiAction", conversation.getId(), request);
+        }
 
         return pythonResponse instanceof HashMap ? pythonResponse : new HashMap<>(pythonResponse);
     }
@@ -189,5 +204,16 @@ public class AiService {
         // userId Python'a payload'dan DEĞİL — header'dan iletilir
         // Bu satır sadece loglama/tracing için session bağlamı sağlar
         return payload;
+    }
+
+    /**
+     * Backward-compatible map key okuma.
+     * Python artık camelCase döner ama geçiş döneminde her iki formatı da destekler.
+     * Önce camelCase'i dener, bulamazsa snake_case'e düşer.
+     */
+    private String getStringFromMap(Map<String, Object> map, String camelKey, String snakeKey) {
+        Object val = map.get(camelKey);
+        if (val == null) val = map.get(snakeKey);
+        return val != null ? String.valueOf(val) : null;
     }
 }

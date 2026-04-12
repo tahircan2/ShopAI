@@ -75,6 +75,19 @@ export class ProductService {
     return this.http.delete<void>(`${environment.apiUrl}/admin/products/${id}`);
   }
 
+  // Admin Categories
+  createCategory(data: Partial<Category> & { parentId?: number | null }): Observable<Category> {
+    return this.http.post<Category>(`${environment.apiUrl}/admin/categories`, data);
+  }
+
+  updateCategory(id: number, data: Partial<Category> & { parentId?: number | null }): Observable<Category> {
+    return this.http.put<Category>(`${environment.apiUrl}/admin/categories/${id}`, data);
+  }
+
+  deleteCategory(id: number): Observable<void> {
+    return this.http.delete<void>(`${environment.apiUrl}/admin/categories/${id}`);
+  }
+
   // Seller-specific
   getMyProducts(page = 0, size = 20): Observable<ProductPage> {
     return this.http.get<ProductPage>(`${environment.apiUrl}/seller/products`, { params: { page, size } });

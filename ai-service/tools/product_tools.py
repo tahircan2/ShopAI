@@ -107,21 +107,23 @@ async def filter_products(
     params: dict = {"page": page, "size": size}
 
     if category:
-        params["category"] = category
+        # Gelen kategori ismini slug formatına dönüştür
+        slug = category.lower().replace("ş", "s").replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c").replace(" ", "-")
+        params["categorySlug"] = slug
     if min_price is not None:
         params["minPrice"] = min_price
     if max_price is not None:
         params["maxPrice"] = max_price
     if colors:
-        params["color"] = ",".join(colors)
+        params["colors"] = ",".join(colors)
     if sizes:
-        params["size"] = ",".join(sizes)
+        params["sizes"] = ",".join(sizes)
     if brand:
         params["brand"] = brand
     if rating is not None:
-        params["rating"] = rating
+        params["minRating"] = rating
     if sort_by:
-        params["sort"] = sort_by
+        params["sortBy"] = sort_by
         params["sortDir"] = sort_dir or "asc"
 
     try:

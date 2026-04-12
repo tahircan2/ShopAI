@@ -32,11 +32,8 @@ public class OrderController {
             @AuthenticationPrincipal JwtAuthDetails auth,
             @Valid @RequestBody CreateOrderRequest req,
             HttpServletRequest request) {
-        String ip = request.getHeader("X-Forwarded-For") != null
-                ? request.getHeader("X-Forwarded-For").split(",")[0].trim()
-                : request.getRemoteAddr();
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orderService.createOrder(auth.getUserId(), req, ip));
+                .body(orderService.createOrder(auth.getUserId(), req, request));
     }
 
     @GetMapping("/api/users/me/orders")
@@ -59,15 +56,11 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrderDetail(auth.getUserId(), orderNumber));
     }
 
-    @PostMapping("/api/orders/{orderNumber}/cancel")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Siparişi iptal et — ownership check zorunlu")
     public ResponseEntity<OrderResponse> cancelOrder(
             @AuthenticationPrincipal JwtAuthDetails auth,
             @PathVariable String orderNumber,
             HttpServletRequest request) {
-        String ip = request.getRemoteAddr();
-        return ResponseEntity.ok(orderService.cancelOrder(auth.getUserId(), orderNumber, ip));
+        return ResponseEntity.ok(orderService.cancelOrder(auth.getUserId(), orderNumber, request));
     }
 
     // ─── Admin Endpoint'leri ─────────────────────────────────────────────────
@@ -86,7 +79,8 @@ public class OrderController {
     @Operation(summary = "Sipariş durumu güncelle (Admin)")
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateOrderStatusRequest req) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(id, req));
+            @Valid @RequestBody UpdateOrderStatusRequest req,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(id, req, request));
     }
 }

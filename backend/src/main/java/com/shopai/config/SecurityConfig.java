@@ -3,6 +3,8 @@ package com.shopai.config;
 
 import com.shopai.security.CsrfCookieFilter;
 import com.shopai.security.JwtAuthFilter;
+import com.shopai.security.OriginHeaderFilter;
+import com.shopai.security.RateLimitingFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +40,8 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final OriginHeaderFilter originHeaderFilter;
+    private final RateLimitingFilter rateLimitingFilter;
     private final UserDetailsService userDetailsService;
 
     @Value("${app.frontend.url}")
@@ -48,6 +52,16 @@ public class SecurityConfig {
         http
                 // CORS
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                // Security Headers
+                .headers(headers -> headers
+                        .frameOptions(frame -> frame.deny()) // Clickjacking protection (X-Frame-Options: DENY)
+                        .contentTypeOptions(contentType -> contentType.disable()) // X-Content-Type-Options: nosniff (by default in Spring Security, but explicitly enforcing)
+                        // Content-Security-Policy
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;")
+                        )
+                )
 
                 // CSRF: PersistentCookieCsrfTokenRepository kullanılır.
                 // Spring'in varsayılan CookieCsrfTokenRepository'si başarılı POST sonrası
@@ -87,6 +101,12 @@ public class SecurityConfig {
 
                         // Geri kalanlar: login zorunlu
                         .anyRequest().authenticated())
+
+                // RateLimitingFilter — Tüm trafiğin en başında, gereksiz DB yükü ve CPU tüketimini engeller
+                .addFilterBefore(rateLimitingFilter, CsrfFilter.class)
+
+                // OriginHeaderFilter — CSRF'ten önce çalışarak ek güvenlik sağlar
+                .addFilterBefore(originHeaderFilter, CsrfFilter.class)
 
                 // JWT filter'ı UsernamePasswordAuthenticationFilter'dan önce ekle
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

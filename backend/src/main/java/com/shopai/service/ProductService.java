@@ -3,6 +3,7 @@ package com.shopai.service;
 import com.shopai.dto.request.ProductRequests.*;
 import com.shopai.dto.response.ProductResponses.*;
 import com.shopai.entity.Category;
+import com.shopai.entity.Order;
 import com.shopai.entity.Product;
 import com.shopai.entity.Review;
 import com.shopai.entity.User;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.Normalizer;
+import java.time.LocalDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -34,6 +37,7 @@ public class ProductService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final AuditLogService auditLogService;
 
     // ─── Ürün Listesi (filtreli, sayfalı) ───────────────────────────────────
     @Transactional(readOnly = true)
@@ -113,7 +117,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ReviewResponse addReview(Long productId, Long userId, ReviewRequest req) {
+    public ReviewResponse addReview(Long productId, Long userId, ReviewRequest req, jakarta.servlet.http.HttpServletRequest request) {
         Product product = findActiveById(productId);
 
         if (reviewRepository.existsByProductIdAndUserId(productId, userId)) {
@@ -134,11 +138,14 @@ public class ProductService {
 
         reviewRepository.save(review);
         updateProductRating(productId);
+        
+        auditLogService.logEntityAction(userId, "PRODUCT_REVIEW_ADD", null, review, "Review", review.getId(), request);
+        
         return ReviewResponse.from(review);
     }
 
     @Transactional
-    public void deleteReview(Long productId, Long reviewId, Long userId, boolean isAdmin) {
+    public void deleteReview(Long productId, Long reviewId, Long userId, boolean isAdmin, jakarta.servlet.http.HttpServletRequest request) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new ResourceNotFoundException("Yorum bulunamadı"));
 
@@ -151,13 +158,15 @@ public class ProductService {
             throw new ForbiddenException("Bu yorumu silme yetkiniz yok");
         }
 
+        auditLogService.logEntityAction(userId, "PRODUCT_REVIEW_DELETE", review, null, "Review", reviewId, request);
+        
         reviewRepository.delete(review);
         updateProductRating(productId);
     }
 
     // ─── Admin: Ürün CRUD ────────────────────────────────────────────────────
     @Transactional
-    public ProductResponse createProduct(CreateProductRequest req, Long sellerId) {
+    public ProductResponse createProduct(CreateProductRequest req, Long sellerId, jakarta.servlet.http.HttpServletRequest request) {
         if (req.getSku() != null && productRepository.findAll().stream()
                 .anyMatch(p -> req.getSku().equals(p.getSku()))) {
             throw new ConflictException("Bu SKU zaten kullanılıyor: " + req.getSku());
@@ -188,11 +197,14 @@ public class ProductService {
             product.setCategory(category);
         }
 
-        return ProductResponse.from(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        auditLogService.logEntityAction(sellerId, "PRODUCT_CREATE", null, saved, "Product", saved.getId(), request);
+        
+        return ProductResponse.from(saved);
     }
 
     @Transactional
-    public ProductResponse updateProduct(Long id, UpdateProductRequest req, Long userId, boolean isAdmin) {
+    public ProductResponse updateProduct(Long id, UpdateProductRequest req, Long userId, boolean isAdmin, jakarta.servlet.http.HttpServletRequest request) {
         Product product = findActiveById(id);
 
         if (!isAdmin) {
@@ -200,6 +212,9 @@ public class ProductService {
                 throw new ForbiddenException("Bu ürünü güncellemeye yetkiniz yok");
             }
         }
+
+        // Clone for audit log before changes
+        Product oldProduct = product.toBuilder().build();
 
         product.setName(req.getName());
         if (req.getSlug() != null) product.setSlug(req.getSlug());
@@ -220,11 +235,14 @@ public class ProductService {
             product.setCategory(category);
         }
 
-        return ProductResponse.from(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        auditLogService.logEntityAction(userId, "PRODUCT_UPDATE", oldProduct, saved, "Product", id, request);
+        
+        return ProductResponse.from(saved);
     }
 
     @Transactional
-    public void deleteProduct(Long id, Long userId, boolean isAdmin) {
+    public void deleteProduct(Long id, Long userId, boolean isAdmin, jakarta.servlet.http.HttpServletRequest request) {
         Product product = findActiveById(id);
 
         if (!isAdmin) {
@@ -233,6 +251,8 @@ public class ProductService {
             }
         }
 
+        auditLogService.logEntityAction(userId, "PRODUCT_DELETE", product, null, "Product", id, request);
+        
         product.setIsActive(false); // soft delete
         productRepository.save(product);
     }
@@ -244,7 +264,8 @@ public class ProductService {
         long totalOrders = orderRepository.count();
         long totalUsers = userRepository.count();
         BigDecimal totalRevenue = orderRepository.sumTotalRevenue();
-        long pendingOrders = orderRepository.countByStatus("PENDING");
+        long pendingOrders = orderRepository.countByStatus(Order.OrderStatus.PENDING);
+        long newUsersThisMonth = userRepository.countByCreatedAtAfter(getStartOfCurrentMonth());
 
         return Map.of(
                 "totalProducts", totalProducts,
@@ -252,7 +273,7 @@ public class ProductService {
                 "totalUsers", totalUsers,
                 "totalRevenue", totalRevenue != null ? totalRevenue : BigDecimal.ZERO,
                 "pendingOrders", pendingOrders,
-                "newUsersThisMonth", 0  // can be extended later
+                "newUsersThisMonth", newUsersThisMonth
         );
     }
 
@@ -262,6 +283,7 @@ public class ProductService {
         BigDecimal totalRevenue = orderRepository.sumRevenueForSeller(sellerId);
         long totalOrders = orderRepository.countOrdersForSeller(sellerId);
         long pendingOrders = orderRepository.countPendingOrdersForSeller(sellerId);
+        BigDecimal monthlyRevenue = orderRepository.sumRevenueForSellerAfter(sellerId, getStartOfCurrentMonth());
 
         // Average rating for seller's products
         Double avgRating = productRepository.avgRatingForSeller(sellerId);
@@ -272,11 +294,17 @@ public class ProductService {
                 "totalRevenue", totalRevenue != null ? totalRevenue : BigDecimal.ZERO,
                 "pendingOrders", pendingOrders,
                 "avgRating", avgRating != null ? avgRating : 0.0,
-                "monthlyRevenue", BigDecimal.ZERO  // can be extended
+                "monthlyRevenue", monthlyRevenue != null ? monthlyRevenue : BigDecimal.ZERO
         );
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
+    private LocalDateTime getStartOfCurrentMonth() {
+        return LocalDateTime.now()
+                .with(TemporalAdjusters.firstDayOfMonth())
+                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+    }
+
     public Product findActiveById(Long id) {
         return productRepository.findById(id)
                 .filter(Product::getIsActive)

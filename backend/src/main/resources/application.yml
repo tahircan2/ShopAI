@@ -65,7 +65,11 @@ app:
   cookie:
     secure: false     # Dev: false, Prod: true (HTTPS gerektirir)
     same-site: Strict
-    domain: ${COOKIE_DOMAIN:}  # Boş bırakılırsa tarayıcı mevcut host'u kullanır
+    domain: ${COOKIE_DOMAIN:}  # Güvenlik Loglaması (0 Maliyet) - 500 Hataları için Webhook
+  webhook:
+    whatsapp:
+      phone: ""   # Örnek: +905551234567
+      apikey: ""  # CallMeBot'tan alacağınız API Key
 
   ai-service:
     url: ${AI_SERVICE_URL:http://localhost:8000}

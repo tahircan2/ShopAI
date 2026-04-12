@@ -123,7 +123,7 @@ public class AuthService {
         cookieService.setAccessTokenCookie(response, accessToken);
         cookieService.setRefreshTokenCookie(response, refreshToken);
 
-        auditLogService.log(user.getId(), "USER_LOGIN", ip);
+        auditLogService.logWithRequest(user.getId(), "USER_LOGIN", "User", user.getId(), null, null, request);
         log.info("User logged in: {}", user.getEmail());
 
         return AuthResponse.builder()
@@ -151,7 +151,7 @@ public class AuthService {
             // Token çalınmış veya süresi dolmuş — tüm tokenları iptal et
             refreshTokenRepository.revokeAllForUser(stored.getUser().getId(), LocalDateTime.now());
             cookieService.clearAuthCookies(response);
-            auditLogService.log(stored.getUser().getId(), "SUSPICIOUS_REFRESH_ATTEMPT", getClientIp(request));
+            auditLogService.logWithRequest(stored.getUser().getId(), "SUSPICIOUS_REFRESH_ATTEMPT", "Token", null, null, null, request);
             throw new InvalidTokenException("Oturum geçersiz. Lütfen tekrar giriş yapın.");
         }
 
@@ -179,7 +179,7 @@ public class AuthService {
     public void logout(Long userId, HttpServletRequest request, HttpServletResponse response) {
         refreshTokenRepository.revokeAllForUser(userId, LocalDateTime.now());
         cookieService.clearAuthCookies(response);
-        auditLogService.log(userId, "USER_LOGOUT", getClientIp(request));
+        auditLogService.logWithRequest(userId, "USER_LOGOUT", "User", userId, null, null, request);
         log.info("User logged out: userId={}", userId);
     }
 
@@ -279,7 +279,7 @@ public class AuthService {
         if (attempts >= maxFailedAttempts) {
             user.setLockedUntil(LocalDateTime.now().plusMinutes(lockoutDurationMinutes));
             log.warn("Account locked due to failed attempts: {}", user.getEmail());
-            auditLogService.log(user.getId(), "ACCOUNT_LOCKED", null);
+            auditLogService.log(user.getId(), "ACCOUNT_LOCKED", "User", user.getId(), null, null, null, null);
         }
         userRepository.save(user);
     }

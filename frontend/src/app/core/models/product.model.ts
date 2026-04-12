@@ -220,7 +220,7 @@ export interface CreateOrderRequest {
 
 // ─── AI Chat Models ──────────────────────────────────────────────────────────
 
-export type AgentActionType = 'PRODUCT_LIST' | 'CART_UPDATED' | 'NAVIGATE' | 'INFO';
+export type AgentActionType = 'PRODUCT_LIST' | 'CART_UPDATED' | 'NAVIGATE' | 'INFO' | 'ORDER_INFO' | 'ERROR';
 export type MessageRole = 'user' | 'assistant' | 'system';
 
 export interface AgentActionResult {
@@ -250,8 +250,10 @@ export interface ChatResponse {
   message: string;
   agentType?: string;
   actionType?: AgentActionType;
-  actionData?: AgentActionResult;
+  actionData?: any;  // Python her agent'tan farklı yapıda data döner
   injectionDetected?: boolean;
+  sessionId?: string;
+  intent?: string;
 }
 
 // ─── Wishlist ────────────────────────────────────────────────────────────────

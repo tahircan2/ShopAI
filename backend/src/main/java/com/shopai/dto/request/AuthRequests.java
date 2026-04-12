@@ -2,6 +2,7 @@ package com.shopai.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -25,6 +26,8 @@ public class AuthRequests {
 
         @NotBlank(message = "Şifre zorunludur")
         @Size(min = 8, message = "Şifre en az 8 karakter olmalıdır")
+        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$", 
+                 message = "Şifre en az bir harf, bir rakam ve bir özel karakter içermelidir")
         private String password;
 
         @NotBlank(message = "Ad zorunludur")
@@ -53,6 +56,8 @@ public class AuthRequests {
 
         @NotBlank(message = "Yeni şifre zorunludur")
         @Size(min = 8, message = "Şifre en az 8 karakter olmalıdır")
+        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$", 
+                 message = "Şifre en az bir harf, bir rakam ve bir özel karakter içermelidir")
         private String newPassword;
     }
 
@@ -70,6 +75,8 @@ public class AuthRequests {
 
         @NotBlank(message = "Yeni şifre zorunludur")
         @Size(min = 8, message = "Şifre en az 8 karakter olmalıdır")
+        @Pattern(regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[@$!%*#?&])[A-Za-z\\d@$!%*#?&]{8,}$", 
+                 message = "Şifre en az bir harf, bir rakam ve bir özel karakter içermelidir")
         private String newPassword;
     }
 }

@@ -81,9 +81,10 @@ public class ProductController {
     public ResponseEntity<ReviewResponse> addReview(
             @PathVariable Long id,
             @AuthenticationPrincipal JwtAuthDetails authDetails,
-            @Valid @RequestBody ReviewRequest req) {
+            @Valid @RequestBody ReviewRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productService.addReview(id, authDetails.getUserId(), req));
+                .body(productService.addReview(id, authDetails.getUserId(), req, request));
     }
 
     @DeleteMapping("/api/products/{productId}/reviews/{reviewId}")
@@ -92,9 +93,10 @@ public class ProductController {
     public ResponseEntity<Void> deleteReview(
             @PathVariable Long productId,
             @PathVariable Long reviewId,
-            @AuthenticationPrincipal JwtAuthDetails authDetails) {
+            @AuthenticationPrincipal JwtAuthDetails authDetails,
+            jakarta.servlet.http.HttpServletRequest request) {
         boolean isAdmin = "ADMIN".equals(authDetails.getRole()) || "ROLE_ADMIN".equals(authDetails.getRole());
-        productService.deleteReview(productId, reviewId, authDetails.getUserId(), isAdmin);
+        productService.deleteReview(productId, reviewId, authDetails.getUserId(), isAdmin, request);
         return ResponseEntity.noContent().build();
     }
 
@@ -125,9 +127,10 @@ public class ProductController {
     @Operation(summary = "Yeni ürün ekle (Admin/Seller)")
     public ResponseEntity<ProductResponse> createProduct(
             @Valid @RequestBody CreateProductRequest req,
-            @AuthenticationPrincipal JwtAuthDetails authDetails) {
+            @AuthenticationPrincipal JwtAuthDetails authDetails,
+            jakarta.servlet.http.HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productService.createProduct(req, authDetails.getUserId()));
+                .body(productService.createProduct(req, authDetails.getUserId(), request));
     }
 
     @PutMapping("/api/admin/products/{id}")
@@ -136,9 +139,10 @@ public class ProductController {
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody UpdateProductRequest req,
-            @AuthenticationPrincipal JwtAuthDetails authDetails) {
+            @AuthenticationPrincipal JwtAuthDetails authDetails,
+            jakarta.servlet.http.HttpServletRequest request) {
         boolean isAdmin = "ADMIN".equals(authDetails.getRole()) || "ROLE_ADMIN".equals(authDetails.getRole());
-        return ResponseEntity.ok(productService.updateProduct(id, req, authDetails.getUserId(), isAdmin));
+        return ResponseEntity.ok(productService.updateProduct(id, req, authDetails.getUserId(), isAdmin, request));
     }
 
     @DeleteMapping("/api/admin/products/{id}")
@@ -146,9 +150,10 @@ public class ProductController {
     @Operation(summary = "Ürün sil / soft delete (Admin/Seller)")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable Long id,
-            @AuthenticationPrincipal JwtAuthDetails authDetails) {
+            @AuthenticationPrincipal JwtAuthDetails authDetails,
+            jakarta.servlet.http.HttpServletRequest request) {
         boolean isAdmin = "ADMIN".equals(authDetails.getRole()) || "ROLE_ADMIN".equals(authDetails.getRole());
-        productService.deleteProduct(id, authDetails.getUserId(), isAdmin);
+        productService.deleteProduct(id, authDetails.getUserId(), isAdmin, request);
         return ResponseEntity.noContent().build();
     }
 

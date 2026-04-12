@@ -106,4 +106,25 @@ public class ProductRequests {
         @NotNull(message = "Bitiş tarihi zorunludur")
         private java.time.LocalDateTime validUntil;
     }
+
+    @Data
+    public static class CategoryRequest {
+        @NotBlank(message = "Kategori adı zorunludur")
+        @Size(max = 100)
+        private String name;
+
+        @NotBlank(message = "Slug zorunludur")
+        @Size(max = 100)
+        private String slug;
+
+        private String description;
+        
+        private Long parentId;
+        
+        private String imageUrl;
+        
+        private Boolean isActive = true;
+        
+        private Integer sortOrder = 0;
+    }
 }

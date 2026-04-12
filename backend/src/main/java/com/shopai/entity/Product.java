@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.type.SqlTypes;
 
@@ -30,7 +32,9 @@ import java.util.Map;
             @Index(name = "idx_products_category_active_price", columnList = "category_id, is_active, price"),
             @Index(name = "idx_products_created_at", columnList = "created_at DESC")
         })
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@SQLDelete(sql = "UPDATE products SET is_deleted = true WHERE id=?")
+@SQLRestriction("is_deleted = false")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder(toBuilder = true)
 public class Product {
 
     @Id
@@ -88,6 +92,10 @@ public class Product {
     @Column(name = "is_featured", nullable = false)
     @Builder.Default
     private Boolean isFeatured = false;
+
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "JSON")

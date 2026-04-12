@@ -33,8 +33,9 @@ public class CartController {
     @Operation(summary = "Sepete ürün ekle")
     public ResponseEntity<CartResponse> addToCart(
             @AuthenticationPrincipal JwtAuthDetails auth,
-            @Valid @RequestBody AddToCartRequest req) {
-        return ResponseEntity.ok(cartService.addToCart(auth.getUserId(), req));
+            @Valid @RequestBody AddToCartRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(cartService.addToCart(auth.getUserId(), req, request));
     }
 
     @PutMapping("/items/{itemId}")
@@ -42,22 +43,24 @@ public class CartController {
     public ResponseEntity<CartResponse> updateQuantity(
             @AuthenticationPrincipal JwtAuthDetails auth,
             @PathVariable Long itemId,
-            @Valid @RequestBody UpdateQuantityRequest req) {
-        return ResponseEntity.ok(cartService.updateQuantity(auth.getUserId(), itemId, req));
+            @Valid @RequestBody UpdateQuantityRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(cartService.updateQuantity(auth.getUserId(), itemId, req, request));
     }
 
     @DeleteMapping("/items/{itemId}")
     @Operation(summary = "Ürünü sepetten çıkar")
     public ResponseEntity<CartResponse> removeItem(
             @AuthenticationPrincipal JwtAuthDetails auth,
-            @PathVariable Long itemId) {
-        return ResponseEntity.ok(cartService.removeItem(auth.getUserId(), itemId));
+            @PathVariable Long itemId,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(cartService.removeItem(auth.getUserId(), itemId, request));
     }
 
     @DeleteMapping
     @Operation(summary = "Sepeti temizle")
-    public ResponseEntity<Void> clearCart(@AuthenticationPrincipal JwtAuthDetails auth) {
-        cartService.clearCart(auth.getUserId());
+    public ResponseEntity<Void> clearCart(@AuthenticationPrincipal JwtAuthDetails auth, jakarta.servlet.http.HttpServletRequest request) {
+        cartService.clearCart(auth.getUserId(), request);
         return ResponseEntity.noContent().build();
     }
 
@@ -65,13 +68,14 @@ public class CartController {
     @Operation(summary = "Kupon uygula")
     public ResponseEntity<CartResponse> applyCoupon(
             @AuthenticationPrincipal JwtAuthDetails auth,
-            @Valid @RequestBody ApplyCouponRequest req) {
-        return ResponseEntity.ok(cartService.applyCoupon(auth.getUserId(), req));
+            @Valid @RequestBody ApplyCouponRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(cartService.applyCoupon(auth.getUserId(), req, request));
     }
 
     @DeleteMapping("/coupon")
     @Operation(summary = "Kuponu kaldır")
-    public ResponseEntity<CartResponse> removeCoupon(@AuthenticationPrincipal JwtAuthDetails auth) {
-        return ResponseEntity.ok(cartService.removeCoupon(auth.getUserId()));
+    public ResponseEntity<CartResponse> removeCoupon(@AuthenticationPrincipal JwtAuthDetails auth, jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(cartService.removeCoupon(auth.getUserId(), request));
     }
 }

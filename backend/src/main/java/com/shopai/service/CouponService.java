@@ -20,7 +20,7 @@ public class CouponService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getAll() {
-        return couponRepository.findAll().stream().map(c -> Map.<String, Object>of(
+        return couponRepository.findAllByIsActiveTrue().stream().map(c -> Map.<String, Object>of(
                 "id", c.getId(),
                 "code", c.getCode(),
                 "discountType", c.getDiscountType().name(),

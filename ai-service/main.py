@@ -127,7 +127,7 @@ async def health_check() -> HealthResponse:
     return HealthResponse()
 
 
-@app.post("/chat", response_model=ChatResponse, tags=["Chat"])
+@app.post("/chat", response_model=ChatResponse, response_model_by_alias=True, tags=["Chat"])
 async def chat(
     request: ChatRequest,
     x_authenticated_user_id: str | None = Header(

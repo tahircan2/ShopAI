@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 @Slf4j
@@ -45,7 +46,7 @@ public class OrderService {
 
     // ─── Sipariş Oluştur ─────────────────────────────────────────────────────
     @Transactional
-    public OrderResponse createOrder(Long userId, CreateOrderRequest req, String ip) {
+    public OrderResponse createOrder(Long userId, CreateOrderRequest req, jakarta.servlet.http.HttpServletRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", userId));
 
@@ -145,13 +146,14 @@ public class OrderService {
         Order saved = orderRepository.save(order);
 
         // Sepeti temizle
-        cartService.clearCart(userId);
+        cartService.clearCart(userId, request);
 
         // Bildirim + e-posta (async)
         notificationService.sendOrderStatusNotification(userId, saved.getOrderNumber(), "PENDING", saved.getId());
         emailService.sendOrderConfirmation(user.getEmail(), saved.getOrderNumber(),
                 totalAmount.toPlainString());
-        auditLogService.log(userId, "ORDER_CREATED", "Order", saved.getId(), ip, null);
+                
+        auditLogService.logEntityAction(userId, "ORDER_CREATED", null, saved, "Order", saved.getId(), request);
 
         log.info("Order created: {} for userId: {}", saved.getOrderNumber(), userId);
         return OrderResponse.from(saved);
@@ -175,7 +177,7 @@ public class OrderService {
 
     // ─── Sipariş İptal ───────────────────────────────────────────────────────
     @Transactional
-    public OrderResponse cancelOrder(Long userId, String orderNumber, String ip) {
+    public OrderResponse cancelOrder(Long userId, String orderNumber, jakarta.servlet.http.HttpServletRequest request) {
         Order order = orderRepository.findByOrderNumberAndUserId(orderNumber, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber));
 
@@ -197,7 +199,16 @@ public class OrderService {
         Order saved = orderRepository.save(order);
 
         notificationService.sendOrderStatusNotification(userId, orderNumber, "CANCELLED", saved.getId());
-        auditLogService.log(userId, "ORDER_CANCELLED", "Order", saved.getId(), ip, null);
+        
+        // Güvenlik: IP ve User-Agent bilgisini alıyoruz
+        String ip = request.getHeader("X-Forwarded-For") != null
+                ? request.getHeader("X-Forwarded-For").split(",")[0].trim()
+                : request.getRemoteAddr();
+
+        // Güvenlik: Enum değerlerini JSON uyumlu Map olarak logluyoruz
+        Map<String, String> oldState = Map.of("status", "PENDING");
+        Map<String, String> newState = Map.of("status", "CANCELLED");
+        auditLogService.logWithMap(userId, "ORDER_CANCELLED", "Order", saved.getId(), oldState, newState, ip, request.getHeader("User-Agent"));
 
         return OrderResponse.from(saved);
     }
@@ -212,10 +223,11 @@ public class OrderService {
 
     // ─── Admin: Sipariş Durumu Güncelle ─────────────────────────────────────
     @Transactional
-    public OrderResponse updateOrderStatus(Long orderId, UpdateOrderStatusRequest req) {
+    public OrderResponse updateOrderStatus(Long orderId, UpdateOrderStatusRequest req, jakarta.servlet.http.HttpServletRequest request) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sipariş", orderId));
 
+        Order.OrderStatus oldStatus = order.getStatus();
         Order.OrderStatus newStatus;
         try {
             newStatus = Order.OrderStatus.valueOf(req.getStatus().toUpperCase());
@@ -238,6 +250,9 @@ public class OrderService {
         emailService.sendOrderStatusUpdate(
                 order.getUser().getEmail(), order.getOrderNumber(), newStatus.name());
 
+        auditLogService.logWithMap(null, "ADMIN_ORDER_STATUS_UPDATE", "Order", orderId, 
+                Map.of("status", oldStatus.name()), Map.of("status", newStatus.name()), null, request.getHeader("User-Agent"));
+                
         return OrderResponse.from(saved);
     }
 

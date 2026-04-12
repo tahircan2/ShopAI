@@ -20,9 +20,12 @@
       <label class="form-label">Açıklama</label>
       <textarea formControlName="description" class="form-input" rows="2"></textarea>
     </div>
+    <div *ngIf="form.get('parentId')?.value" class="form-group" style="margin-top:12px">
+      <span class="text-sm text-dim">Bir alt kategori ekliyorsunuz. (Parent ID: {{ form.get('parentId')?.value }})</span>
+    </div>
     <div style="display:flex;gap:8px;margin-top:12px">
-      <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving()">Kaydet</button>
-      <button type="button" class="btn btn-ghost btn-sm" (click)="showForm.set(false)">İptal</button>
+      <button type="submit" class="btn btn-primary btn-sm" [disabled]="saving()">{{ editingId() ? 'Güncelle' : 'Kaydet' }}</button>
+      <button type="button" class="btn btn-ghost btn-sm" (click)="toggleShowForm()">İptal</button>
     </div>
   </form>
 </div>
@@ -41,18 +44,38 @@
         <th>Ad</th>
         <th>Slug</th>
         <th>Durum</th>
+        <th>İşlemler</th>
       </tr>
     </thead>
     <tbody>
-      @for (c of categories(); track c.id) {
+      @for (c of flattenedCategories(); track c.id) {
       <tr>
         <td class="text-dim text-sm">#{{ c.id }}</td>
-        <td style="font-size:13px;font-weight:500">{{ c.name }}</td>
+        <td style="font-size:13px;font-weight:500;">
+          <div [ngStyle]="{'padding-left': (c.level * 20) + 'px'}" style="display: flex; align-items: center; gap: 4px;">
+            @if(c.level > 0) { <span class="text-muted">└</span> }
+            @if(c.hasChildren) {
+              <button type="button" class="btn btn-ghost" style="padding: 0; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; border: none; background: transparent;" (click)="toggleCategory(c.id)">
+                {{ c.expanded ? '▼' : '▶' }}
+              </button>
+            } @else {
+              <span style="width: 20px; display: inline-block;"></span>
+            }
+            <span style="cursor: pointer;" (click)="c.hasChildren && toggleCategory(c.id)">{{ c.name }}</span>
+          </div>
+        </td>
         <td class="text-muted text-sm">{{ c.slug }}</td>
         <td>
           <span class="badge" [class]="c.isActive ? 'badge-success' : 'badge-muted'">
             {{ c.isActive ? 'Aktif' : 'Pasif' }}
           </span>
+        </td>
+        <td>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-secondary" style="padding: 2px 8px; font-size: 11px" (click)="openAddSubcategory(c.id)">+ Alt</button>
+            <button class="btn btn-primary" style="padding: 2px 8px; font-size: 11px" (click)="editCategory(c)">Düzenle</button>
+            <button class="btn btn-danger" style="padding: 2px 8px; font-size: 11px" (click)="deleteCategory(c)">Sil</button>
+          </div>
         </td>
       </tr>
       }

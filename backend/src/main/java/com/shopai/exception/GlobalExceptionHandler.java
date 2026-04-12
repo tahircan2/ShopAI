@@ -1,5 +1,8 @@
 package com.shopai.exception;
 
+import com.shopai.service.WebhookAlertService;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +19,10 @@ import java.util.Map;
 
 @Slf4j
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final WebhookAlertService webhookAlertService;
 
     // DTO validasyon hataları → 400 + field bazlı hata listesi
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -65,8 +71,13 @@ public class GlobalExceptionHandler {
 
     // Beklenmeyen hatalar — stack trace ve iç detaylar ASLA dışarı sızdırılmaz
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        log.error("Unexpected error: {}", ex.getMessage(), ex);
+    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex, HttpServletRequest request) {
+        log.error("Unexpected error at {}: {}", request.getRequestURI(), ex.getMessage(), ex);
+
+        // Discord Webhook fırlatma işlemini tamamen arka planda (async) başlat
+        String stackTraceStr = java.util.Arrays.toString(ex.getStackTrace());
+        webhookAlertService.sendErrorAlert(ex.getMessage(), stackTraceStr, request.getRequestURI());
+
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Bir hata oluştu. Lütfen tekrar deneyin.", null);
     }
 

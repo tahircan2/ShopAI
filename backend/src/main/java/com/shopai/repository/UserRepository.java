@@ -42,4 +42,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Modifying
     @Query("UPDATE User u SET u.failedLoginAttempts = 0, u.lockedUntil = null WHERE u.lockedUntil < :now")
     int unlockExpiredAccounts(LocalDateTime now);
+
+    long countByCreatedAtAfter(LocalDateTime date);
 }

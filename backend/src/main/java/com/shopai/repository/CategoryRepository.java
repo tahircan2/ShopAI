@@ -11,7 +11,9 @@ import java.util.Optional;
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Long> {
     Optional<Category> findBySlug(String slug);
+
     List<Category> findByParentIsNullAndIsActiveTrueOrderBySortOrderAsc();
+
     List<Category> findByParentIdAndIsActiveTrueOrderBySortOrderAsc(Long parentId);
 
     @Query("SELECT c FROM Category c LEFT JOIN FETCH c.children WHERE c.parent IS NULL AND c.isActive = true ORDER BY c.sortOrder")

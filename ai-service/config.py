@@ -13,7 +13,7 @@ from functools import lru_cache
 class Settings(BaseSettings):
     # OpenAI
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
-    openai_model: str = Field(default="gpt-4o", env="OPENAI_MODEL")
+    openai_model: str = Field(default="gpt-4o-mini", env="OPENAI_MODEL")
 
     # Spring Boot backend URL (internal communication)
     spring_boot_base_url: str = Field(

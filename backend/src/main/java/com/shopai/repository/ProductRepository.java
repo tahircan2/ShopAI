@@ -28,9 +28,9 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Double avgRatingForSeller(@Param("sellerId") Long sellerId);
 
     @Query("SELECT p FROM Product p WHERE p.isActive = true AND " +
-           "(LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(p.description) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
-           "LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%')))")
+            "(LOWER(p.name) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+            "LOWER(p.description) LIKE LOWER(CONCAT('%', :q, '%')) OR " +
+            "LOWER(p.brand) LIKE LOWER(CONCAT('%', :q, '%')))")
     Page<Product> searchByKeyword(String q, Pageable pageable);
 
     @Modifying

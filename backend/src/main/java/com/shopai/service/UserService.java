@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +31,7 @@ public class UserService {
     private final ProductRepository productRepository;
     private final com.shopai.repository.ReviewRepository reviewRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditLogService auditLogService;
 
     // ─── Profil ──────────────────────────────────────────────────────────────
     @Transactional(readOnly = true)
@@ -38,22 +40,31 @@ public class UserService {
     }
 
     @Transactional
-    public UserInfo updateProfile(Long userId, UpdateProfileRequest req) {
+    public UserInfo updateProfile(Long userId, UpdateProfileRequest req, jakarta.servlet.http.HttpServletRequest request) {
         User user = findUser(userId);
+        User oldUser = user.toBuilder().build();
+        
         user.setFirstName(req.getFirstName().trim());
         user.setLastName(req.getLastName().trim());
         user.setPhone(req.getPhone());
-        return UserInfo.from(userRepository.save(user));
+        
+        User saved = userRepository.save(user);
+        auditLogService.logEntityAction(userId, "USER_PROFILE_UPDATE", oldUser, saved, "User", userId, request);
+        
+        return UserInfo.from(saved);
     }
 
     @Transactional
-    public void changePassword(Long userId, ChangePasswordRequest req) {
+    public void changePassword(Long userId, ChangePasswordRequest req, jakarta.servlet.http.HttpServletRequest request) {
         User user = findUser(userId);
         if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPasswordHash())) {
             throw new BadRequestException("Mevcut şifre hatalı");
         }
         user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
         userRepository.save(user);
+        
+        auditLogService.logWithMap(userId, "USER_PASSWORD_CHANGE", "User", userId, 
+                Map.of("password", "********"), Map.of("password", "********"), null, request.getHeader("User-Agent"));
     }
 
     // ─── Adresler ────────────────────────────────────────────────────────────
@@ -65,7 +76,7 @@ public class UserService {
     }
 
     @Transactional
-    public AddressResponse addAddress(Long userId, AddressRequest req) {
+    public AddressResponse addAddress(Long userId, AddressRequest req, jakarta.servlet.http.HttpServletRequest request) {
         User user = findUser(userId);
 
         if (Boolean.TRUE.equals(req.getIsDefault())) {
@@ -86,14 +97,19 @@ public class UserService {
                 .isDefault(Boolean.TRUE.equals(req.getIsDefault()))
                 .build();
 
-        return AddressResponse.from(addressRepository.save(address));
+        Address saved = addressRepository.save(address);
+        auditLogService.logEntityAction(userId, "USER_ADDRESS_ADD", null, saved, "Address", saved.getId(), request);
+        
+        return AddressResponse.from(saved);
     }
 
     @Transactional
-    public AddressResponse updateAddress(Long userId, Long addressId, AddressRequest req) {
+    public AddressResponse updateAddress(Long userId, Long addressId, AddressRequest req, jakarta.servlet.http.HttpServletRequest request) {
         // Ownership check — kullanıcının kendi adresi mi?
         Address address = addressRepository.findByIdAndUserId(addressId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adres bulunamadı"));
+
+        Address oldAddress = address.toBuilder().build();
 
         if (Boolean.TRUE.equals(req.getIsDefault())) {
             addressRepository.clearDefaultForUser(userId);
@@ -110,13 +126,18 @@ public class UserService {
         if (req.getCountry() != null) address.setCountry(req.getCountry());
         if (req.getIsDefault() != null) address.setIsDefault(req.getIsDefault());
 
-        return AddressResponse.from(addressRepository.save(address));
+        Address saved = addressRepository.save(address);
+        auditLogService.logEntityAction(userId, "USER_ADDRESS_UPDATE", oldAddress, saved, "Address", addressId, request);
+        
+        return AddressResponse.from(saved);
     }
 
     @Transactional
-    public void deleteAddress(Long userId, Long addressId) {
+    public void deleteAddress(Long userId, Long addressId, jakarta.servlet.http.HttpServletRequest request) {
         Address address = addressRepository.findByIdAndUserId(addressId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Adres bulunamadı"));
+        
+        auditLogService.logEntityAction(userId, "USER_ADDRESS_DELETE", address, null, "Address", addressId, request);
         addressRepository.delete(address);
     }
 

@@ -3,6 +3,8 @@ package com.shopai.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -20,7 +22,9 @@ import java.util.List;
             @Index(name = "idx_users_email_verify_token", columnList = "email_verify_token"),
             @Index(name = "idx_users_password_reset_token_hash", columnList = "password_reset_token_hash")
         })
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@SQLDelete(sql = "UPDATE users SET is_deleted = true WHERE id=?")
+@SQLRestriction("is_deleted = false")
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder(toBuilder = true)
 public class User {
 
     @Id
@@ -54,6 +58,10 @@ public class User {
     @Column(name = "is_email_verified", nullable = false)
     @Builder.Default
     private Boolean isEmailVerified = false;
+
+    @Column(name = "is_deleted", nullable = false)
+    @Builder.Default
+    private Boolean isDeleted = false;
 
     @Column(name = "email_verify_token", length = 255)
     private String emailVerifyToken;

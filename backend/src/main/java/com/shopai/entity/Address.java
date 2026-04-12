@@ -9,7 +9,7 @@ import lombok.*;
             @Index(name = "idx_address_user", columnList = "user_id"),
             @Index(name = "idx_address_default", columnList = "user_id, is_default")
         })
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder(toBuilder = true)
 public class Address {
 
     @Id

@@ -41,16 +41,18 @@ public class UserController {
     @Operation(summary = "Profil güncelle")
     public ResponseEntity<UserInfo> updateProfile(
             @AuthenticationPrincipal JwtAuthDetails auth,
-            @Valid @RequestBody UpdateProfileRequest req) {
-        return ResponseEntity.ok(userService.updateProfile(auth.getUserId(), req));
+            @Valid @RequestBody UpdateProfileRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(userService.updateProfile(auth.getUserId(), req, request));
     }
 
     @PutMapping("/password")
     @Operation(summary = "Şifre değiştir")
     public ResponseEntity<MessageResponse> changePassword(
             @AuthenticationPrincipal JwtAuthDetails auth,
-            @Valid @RequestBody ChangePasswordRequest req) {
-        userService.changePassword(auth.getUserId(), req);
+            @Valid @RequestBody ChangePasswordRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        userService.changePassword(auth.getUserId(), req, request);
         return ResponseEntity.ok(new MessageResponse("Şifreniz başarıyla değiştirildi."));
     }
 
@@ -66,9 +68,10 @@ public class UserController {
     @Operation(summary = "Yeni adres ekle")
     public ResponseEntity<AddressResponse> addAddress(
             @AuthenticationPrincipal JwtAuthDetails auth,
-            @Valid @RequestBody AddressRequest req) {
+            @Valid @RequestBody AddressRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(userService.addAddress(auth.getUserId(), req));
+                .body(userService.addAddress(auth.getUserId(), req, request));
     }
 
     @PutMapping("/addresses/{addressId}")
@@ -76,16 +79,18 @@ public class UserController {
     public ResponseEntity<AddressResponse> updateAddress(
             @AuthenticationPrincipal JwtAuthDetails auth,
             @PathVariable Long addressId,
-            @Valid @RequestBody AddressRequest req) {
-        return ResponseEntity.ok(userService.updateAddress(auth.getUserId(), addressId, req));
+            @Valid @RequestBody AddressRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(userService.updateAddress(auth.getUserId(), addressId, req, request));
     }
 
     @DeleteMapping("/addresses/{addressId}")
     @Operation(summary = "Adres sil — ownership check yapılır")
     public ResponseEntity<Void> deleteAddress(
             @AuthenticationPrincipal JwtAuthDetails auth,
-            @PathVariable Long addressId) {
-        userService.deleteAddress(auth.getUserId(), addressId);
+            @PathVariable Long addressId,
+            jakarta.servlet.http.HttpServletRequest request) {
+        userService.deleteAddress(auth.getUserId(), addressId, request);
         return ResponseEntity.noContent().build();
     }
 

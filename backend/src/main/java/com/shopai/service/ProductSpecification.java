@@ -19,14 +19,27 @@ public class ProductSpecification {
             // Sadece aktif ürünler
             predicates.add(cb.isTrue(root.get("isActive")));
 
-            // Serbest metin arama (q parametresi)
+            // Serbest metin arama (q parametresi) - Tokenized Flexible Search
             if (filter.getQ() != null && !filter.getQ().isBlank()) {
-                String kw = "%" + filter.getQ().trim().toLowerCase() + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("name")), kw),
-                        cb.like(cb.lower(root.get("description")), kw),
-                        cb.like(cb.lower(root.get("brand")), kw)
-                ));
+                String queryStr = filter.getQ().trim().toLowerCase();
+                String[] tokens = queryStr.split("\\s+"); // Kelimelere böl
+                
+                List<Predicate> tokenPredicates = new ArrayList<>();
+                for (String token : tokens) {
+                    if (token.isBlank()) continue;
+                    String kw = "%" + token + "%";
+                    // Her kelimenin ad, açıklama veya markadan birinde geçmesi şartı
+                    tokenPredicates.add(cb.or(
+                            cb.like(cb.lower(root.get("name")), kw),
+                            cb.like(cb.lower(root.get("description")), kw),
+                            cb.like(cb.lower(root.get("brand")), kw)
+                    ));
+                }
+                
+                if (!tokenPredicates.isEmpty()) {
+                    // Tüm kelimeler zorunlu geçmeli (AND)
+                    predicates.add(cb.and(tokenPredicates.toArray(new Predicate[0])));
+                }
             }
 
             // Kategori filtresi — Recursive destekli

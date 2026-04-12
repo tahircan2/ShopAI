@@ -43,7 +43,7 @@ public class AiController {
                 ? request.getHeader("X-Forwarded-For").split(",")[0].trim()
                 : request.getRemoteAddr();
 
-        return ResponseEntity.ok(aiService.chat(req, userId, ip));
+        return ResponseEntity.ok(aiService.chat(req, userId, ip, request));
     }
 
     @GetMapping("/conversations/{sessionId}")

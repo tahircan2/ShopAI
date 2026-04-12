@@ -81,7 +81,10 @@ export class AiChatService {
 
     switch (res.actionType) {
       case 'PRODUCT_LIST': {
-        const products = (res.actionData.data as import('../models/product.model').ProductSummary[]);
+        // Python filter_agent: actionData = { filters: {...}, products: { content: [...], ... } }
+        // Python recommend_agent: actionData = { products: { content: [...], ... }, recommendation_type: "..." }
+        const productData = res.actionData?.products;
+        const products = (productData?.content ?? productData) as import('../models/product.model').ProductSummary[];
         if (products?.length) {
           this.productService.applyAiFilter(products);
           this.router.navigate(['/products']);
@@ -93,8 +96,12 @@ export class AiChatService {
         break;
       }
       case 'NAVIGATE': {
-        const url = res.actionData.data as string;
+        const url = res.actionData?.url as string;
         if (url) this.router.navigateByUrl(url);
+        break;
+      }
+      case 'ORDER_INFO': {
+        // Sipariş bilgisi — chatbot'ta mesaj olarak gösterilir, ekstra aksiyon gerekmez
         break;
       }
     }

@@ -51,6 +51,14 @@ public class EmailService {
     }
 
     private void sendSimpleEmail(String to, String subject, String text) {
+        if (to == null || to.trim().isEmpty()) return;
+
+        // Profesyonel Çözüm: Test ve Dummy maillere (Örn: admin@shopai.com) giden SMTP isteklerini kes
+        if (to.toLowerCase().endsWith("@shopai.com") || to.toLowerCase().endsWith("@example.com")) {
+            log.info("Test/Dummy sistem mailine ({}) gönderim atlandı. (Gereksiz Bounceleri (Teslim Edilemedi) önlemek için)", to);
+            return;
+        }
+
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom(fromEmail);
@@ -58,6 +66,7 @@ public class EmailService {
             message.setSubject(subject);
             message.setText(text);
             mailSender.send(message);
+            log.info("Email başarıyla gönderildi - To: {}, Subject: {}", to, subject);
         } catch (Exception e) {
             log.error("Email gönderilemedi - To: {}, Subject: {}, Error: {}", to, subject, e.getMessage());
         }

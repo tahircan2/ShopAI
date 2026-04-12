@@ -17,6 +17,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import org.springframework.beans.factory.annotation.Value;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -29,11 +31,36 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
 
+    @Value("${app.ai-service.internal-key}")
+    private String internalKey;
+
     @Override
     protected void doFilterInternal(
             @NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
+
+        // AI servisinden gelen yetkili iç istekleri kontrol et
+        String reqInternalKey = request.getHeader("X-Internal-Key");
+        if (reqInternalKey != null && reqInternalKey.equals(internalKey)) {
+            String userIdStr = request.getHeader("X-Authenticated-User-Id");
+            if (userIdStr != null && !userIdStr.isEmpty()) {
+                try {
+                    Long userId = Long.parseLong(userIdStr);
+                    // Internal AI servisi okuma işlemleri(sipariş sorgulama vs) için varsayılan USER rolü ver
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
+                    var authDetails = new JwtAuthDetails(userId, "internal@shopai.com", "USER");
+                    var authentication = new UsernamePasswordAuthenticationToken(authDetails, null, authorities);
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    filterChain.doFilter(request, response);
+                    return;
+                } catch (NumberFormatException e) {
+                    log.warn("Invalid X-Authenticated-User-Id format: {}", userIdStr);
+                }
+            }
+        }
 
         String token = extractTokenFromCookie(request);
 

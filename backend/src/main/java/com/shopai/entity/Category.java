@@ -18,7 +18,7 @@ import java.util.List;
             @Index(name = "idx_categories_slug", columnList = "slug"),
             @Index(name = "idx_categories_active", columnList = "is_active")
         })
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder(toBuilder = true)
 public class Category {
 
     @Id

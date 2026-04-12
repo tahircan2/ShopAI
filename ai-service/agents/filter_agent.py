@@ -1,8 +1,8 @@
 """
-agents/filter_agent.py — Doğal dil → ürün filtresi dönüşümü.
+agents/filter_agent.py — Doğal dil → ürün filtresi dönüşümü ve Doğal Yanıt Üretimi.
 
 Kullanıcının doğal dil ürün taleplerini Spring Boot query parametrelerine çevirir.
-Örnek: "200 TL altı kırmızı nike ayakkabı" → {maxPrice: 200, colors: ['Kırmızı'], brand: 'Nike', category: 'Ayakkabı'}
+Sonuçları aldıktan sonra, LLM kullanarak profesyonel, asistan vari bir yanıt metni üretir.
 """
 
 import json
@@ -17,39 +17,39 @@ from tools.product_tools import filter_products, search_products
 logger = structlog.get_logger(__name__)
 
 FILTER_SYSTEM_PROMPT = """Sen bir e-ticaret ürün filtresi oluşturma sistemisin.
+Sana kullanıcının son mesajı ve varsa önceki sohbet geçmişi verilecek.
 Kullanıcı mesajından ürün filtresi parametrelerini çıkar ve JSON formatında döndür.
 
-Çıkarabileceğin parametreler:
-- category: string (ör. "Ayakkabı", "Tişört", "Laptop")
-- min_price: number (TL cinsinden minimum fiyat)
-- max_price: number (TL cinsinden maksimum fiyat)
-- colors: array of strings (ör. ["Kırmızı", "Mavi"])
-- sizes: array of strings (ör. ["S", "M", "L", "XL", "42", "43"])
-- brand: string (marka adı, ör. "Nike", "Adidas", "Apple")
-- rating: number (minimum puan, 1-5 arası)
+ÖNEMLİ KURALLAR:
+1. Eğer kullanıcının son mesajı önceki aramayla tamamen farklı bir niyet taşıyorsa (örn: önce tişört arayıp sonra sweatshirt diyorsa), önceki filtreleri DAHİL ETME, SADECE YENİ MESAJI baz al.
+2. Sadece ve sadece bahsi geçen özellikleri JSON olarak çıkar. Olmayan bir şeyi (ör: tişört, ayakkabı) kategori olarak tahmin etme veya örneklerden esinlenme.
+3. Fiyatlar TL cinsindendir.
+
+Çıkarabileceğin alanlar:
+- category: string (kullanıcı açıkça belirtmişse kategori adı yaz)
+- min_price: number (TL)
+- max_price: number (TL)
+- colors: array of strings 
+- sizes: array of strings 
+- brand: string 
+- rating: number
 - sort_by: string (price | rating | ratingCount | createdAt)
 - sort_dir: string (asc | desc)
-- q: string (tam metin arama için anahtar kelimeler)
+- q: string (kategori harici tam metin arama anahtar kelimeleri)
 
-Kurallar:
-- Mesajda belirtilmeyen parametreleri ekleme
-- Fiyat Türk Lirası cinsindendir
-- Büyük/küçük harf tutarlı kullan (Türkçe için: Kırmızı, Mavi, Yeşil)
-- "en ucuz" → sort_by: "price", sort_dir: "asc"
-- "en pahalı" → sort_by: "price", sort_dir: "desc"  
-- "en çok değerlendirilen" → sort_by: "ratingCount", sort_dir: "desc"
-- "en çok beğenilen" veya "en iyi" → sort_by: "rating", sort_dir: "desc"
-- "yeni" veya "son eklenen" → sort_by: "createdAt", sort_dir: "desc"
+SADECE geçerli JSON döndür, açıklama veya markdown ekleme.
+"""
 
-SADECE geçerli JSON döndür. Açıklama ekleme. Markdown kullanma.
-Örnek çıktı: {"category": "Ayakkabı", "max_price": 200, "colors": ["Kırmızı"], "brand": "Nike"}"""
+RESPONSE_SYSTEM_PROMPT = """Sen ShopAI adında kibar, yardımsever ve profesyonel bir e-ticaret asistanısın.
+Görev: Sistemden dönen arama/filtreleme sonuçlarını kullanıcıya açıklayıcı ve doğal bir dille sunmak.
+Kullanıcıya robotik ("x ürün bulundu") cümleler yerine "Aramanıza uygun şu ürünleri buldum, farklı bir renk isterseniz belirtebilirsiniz" gibi asistan benzeri cümleler kur. 
+Eğer ürün bulunamazsa, filtreleri esnetmesini veya başka kelimelerle aramasını samimi bir şekilde tavsiye et. 
+Detaylara inerek, listelenen ilk birkaç ürünün ismini/fiyatını örnek göstererek sohbete canlılık kat. Liste halinde marka/ürün özeti vermek çok iyidir.
+"""
 
-
-async def extract_filter_params(message: str) -> dict:
+async def extract_filter_params(messages: list) -> dict:
     """
-    Kullanıcı mesajından filtre parametrelerini çıkarır.
-
-    KRİTİK: message ASLA sistem promptuna concat edilmez.
+    Kullanıcı mesaj geçmişinden filtre parametrelerini çıkarır.
     """
     llm = ChatOpenAI(
         model=settings.openai_model,
@@ -59,11 +59,8 @@ async def extract_filter_params(message: str) -> dict:
     )
 
     try:
-        response = await llm.ainvoke([
-            SystemMessage(content=FILTER_SYSTEM_PROMPT),
-            HumanMessage(content=message),  # Kullanıcı girdisi her zaman ayrı mesaj
-        ])
-
+        messages_with_sys = [SystemMessage(content=FILTER_SYSTEM_PROMPT)] + messages
+        response = await llm.ainvoke(messages_with_sys)
         params = json.loads(response.content)
         logger.info("filter_params_extracted", params=params)
         return params
@@ -75,16 +72,51 @@ async def extract_filter_params(message: str) -> dict:
         return {}
 
 
+async def generate_conversational_response(messages: list, filter_params: dict, products_result: dict) -> str:
+    """
+    Arama sonuçlarını yorumlayıp doğal insansı bir yanıt oluşturur.
+    """
+    llm = ChatOpenAI(
+        model=settings.openai_model,
+        temperature=0.7,
+        api_key=settings.openai_api_key,
+    )
+    
+    total = products_result.get("totalElements", 0)
+    items = products_result.get("content", [])[:3]  # Örnek ilk 3 ürün
+    
+    context_msg = f"""
+Sistem Arama Sonuç Özeti:
+- Uygulanan Filtreler (JSON): {json.dumps(filter_params, ensure_ascii=False)}
+- Bulunan Toplam Ürün Sayısı: {total}
+- Örnek Listelenen İlk Ürünler: {[{'isim': i.get('name'), 'fiyat': i.get('price')} for i in items]}
+
+Yönerge: Yukarıdaki sonuç verilerini göz önüne alarak, kullanıcının son mesajına istinaden yönlendirici ve doğal bir Türkçe yanıt üret. Kısa ve öz ol (Maksimum 2-3 paragraf).
+"""
+    try:
+        # Son kullanıcı mesajını ve sistem sonucunu LLM'e ver
+        messages_with_sys = [
+            SystemMessage(content=RESPONSE_SYSTEM_PROMPT),
+            messages[-1],  # kullanıcının arama cümlesi
+            HumanMessage(content=context_msg)
+        ]
+        response = await llm.ainvoke(messages_with_sys)
+        return response.content
+    except Exception as e:
+        logger.error("conversational_response_error", error=str(e))
+        return f"{total} ürün bulundu."
+
+
 async def filter_agent_node(state: AgentState) -> AgentState:
     """
     LangGraph Filter Agent node'u.
-    Mesajdan filtre çıkarır, Spring Boot'a sorgu yapar, sonucu state'e yazar.
+    Mesaj geçmişinden filtre çıkarır, Spring Boot'a sorgu yapar, doğal dilde yanıt oluşturur ve state'e yazar.
     """
-    message = state["current_message"]
+    messages = state["messages"]
     user_id = state.get("user_id")
 
-    # 1. Filtre parametrelerini çıkar
-    params = await extract_filter_params(message)
+    # 1. Filtre parametrelerini çıkar (Context'i geçmişten al)
+    params = await extract_filter_params(messages)
 
     try:
         # 2. Spring Boot'a filtre sorgusu gönder
@@ -103,34 +135,20 @@ async def filter_agent_node(state: AgentState) -> AgentState:
                 "user_id": user_id,
             })
 
-        # 3. Sonucu değerlendir
+        # 3. Hata veya Boş Sonuç Kontrolü
         content = result.get("content", [])
         total = result.get("totalElements", 0)
 
         if "error" in result:
             return {
                 **state,
-                "final_response": f"Ürünler listelenirken bir sorun oluştu: {result['error']}",
+                "final_response": f"Ürünler aranırken geçici bir teknik sorun oluştu: {result['error']}",
                 "agent_type": "filter_agent",
                 "action_type": "INFO",
             }
 
-        if not content:
-            return {
-                **state,
-                "final_response": "Arama kriterlerinize uygun ürün bulunamadı. "
-                                  "Filtreleri değiştirerek tekrar deneyebilirsiniz.",
-                "agent_type": "filter_agent",
-                "action_type": "INFO",
-                "action_data": {"filters": params, "totalElements": 0},
-            }
-
-        # 4. Kullanıcıya yanıt oluştur
-        response_text = f"{total} ürün bulundu."
-        if params.get("max_price"):
-            response_text += f" (Max {params['max_price']} TL)"
-        if params.get("brand"):
-            response_text += f" {params['brand']} markası filtrelendi."
+        # 4. Profesyonel Conversational Yanıt Üret
+        response_text = await generate_conversational_response(messages, params, result)
 
         logger.info("filter_agent_success", total=total, params=params, user_id=user_id)
 
@@ -138,7 +156,7 @@ async def filter_agent_node(state: AgentState) -> AgentState:
             **state,
             "final_response": response_text,
             "agent_type": "filter_agent",
-            "action_type": "PRODUCT_LIST",
+            "action_type": "PRODUCT_LIST" if content else "INFO",
             "action_data": {
                 "filters": params,
                 "products": result,
@@ -149,7 +167,7 @@ async def filter_agent_node(state: AgentState) -> AgentState:
         logger.error("filter_agent_error", error=str(e))
         return {
             **state,
-            "final_response": "Ürün listesi alınırken bir hata oluştu. Lütfen tekrar deneyin.",
+            "final_response": "Ürün listesi alınırken bir hata oluştu. Lütfen birazdan tekrar deneyiniz.",
             "agent_type": "filter_agent",
             "error": str(e),
         }

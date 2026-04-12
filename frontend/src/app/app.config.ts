@@ -5,6 +5,7 @@ import { routes } from './app.routes';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
 import { csrfInterceptor } from './core/interceptors/csrf.interceptor';
 import { loadingInterceptor } from './core/interceptors/loading.interceptor';
+import { errorInterceptor } from './core/interceptors/error.interceptor';
 import { AuthService } from './core/services/auth.service';
 import { GlobalErrorHandler } from './core/errors/global-error-handler';
 import { catchError, of } from 'rxjs';
@@ -28,7 +29,7 @@ export const appConfig: ApplicationConfig = {
     ),
     provideHttpClient(
       withFetch(),
-      withInterceptors([authInterceptor, csrfInterceptor, loadingInterceptor])
+      withInterceptors([authInterceptor, csrfInterceptor, loadingInterceptor, errorInterceptor])
     ),
     {
       provide: APP_INITIALIZER,

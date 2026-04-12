@@ -27,7 +27,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     BigDecimal sumTotalRevenue();
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.status = :status")
-    long countByStatus(@Param("status") String status);
+    long countByStatus(@Param("status") Order.OrderStatus status);
 
     // Seller stats
     @Query("SELECT COALESCE(SUM(oi.totalPrice), 0) FROM OrderItem oi " +
@@ -41,4 +41,16 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT COUNT(DISTINCT oi.order.id) FROM OrderItem oi " +
            "JOIN oi.product p WHERE p.seller.id = :sellerId AND oi.order.status = 'PENDING'")
     long countPendingOrdersForSeller(@Param("sellerId") Long sellerId);
+
+    // Date-based stats
+    @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status <> 'CANCELLED' AND o.createdAt >= :date")
+    BigDecimal sumTotalRevenueAfter(@Param("date") java.time.LocalDateTime date);
+
+    @Query("SELECT COALESCE(SUM(oi.totalPrice), 0) FROM OrderItem oi " +
+           "JOIN oi.product p WHERE p.seller.id = :sellerId AND oi.order.status <> 'CANCELLED' AND oi.order.createdAt >= :date")
+    BigDecimal sumRevenueForSellerAfter(@Param("sellerId") Long sellerId, @Param("date") java.time.LocalDateTime date);
+
+    @Query("SELECT COUNT(DISTINCT oi.order.id) FROM OrderItem oi " +
+           "JOIN oi.product p WHERE p.seller.id = :sellerId AND oi.order.createdAt >= :date")
+    long countOrdersForSellerAfter(@Param("sellerId") Long sellerId, @Param("date") java.time.LocalDateTime date);
 }
