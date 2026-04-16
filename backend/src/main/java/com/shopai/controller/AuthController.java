@@ -47,13 +47,13 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Çıkış — cookie'leri temizle, token'ları geçersiz kıl")
     public ResponseEntity<MessageResponse> logout(
             @AuthenticationPrincipal JwtAuthDetails authDetails,
             HttpServletRequest request,
             HttpServletResponse response) {
-        authService.logout(authDetails.getUserId(), request, response);
+        Long userId = authDetails != null ? authDetails.getUserId() : null;
+        authService.logout(userId, request, response);
         return ResponseEntity.ok(new MessageResponse("Başarıyla çıkış yapıldı."));
     }
 

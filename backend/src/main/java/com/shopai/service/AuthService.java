@@ -40,6 +40,7 @@ public class AuthService {
     private final CookieService cookieService;
     private final EmailService emailService;
     private final AuditLogService auditLogService;
+    private final BlacklistService blacklistService;
 
     @Value("${app.security.max-failed-attempts}")
     private int maxFailedAttempts;
@@ -177,10 +178,26 @@ public class AuthService {
     // ────────────────────────────────────────────────
     @Transactional
     public void logout(Long userId, HttpServletRequest request, HttpServletResponse response) {
-        refreshTokenRepository.revokeAllForUser(userId, LocalDateTime.now());
+        // Token'ları kara listeye al
+        String accessToken = cookieService.extractTokenFromCookie(request, "access_token");
+        String refreshToken = cookieService.extractRefreshTokenFromCookie(request);
+
+        if (accessToken != null) blacklistService.blacklistToken(accessToken);
+        if (refreshToken != null) blacklistService.blacklistToken(refreshToken);
+
+        if (userId != null) {
+            refreshTokenRepository.revokeAllForUser(userId, LocalDateTime.now());
+        }
         cookieService.clearAuthCookies(response);
-        auditLogService.logWithRequest(userId, "USER_LOGOUT", "User", userId, null, null, request);
-        log.info("User logged out: userId={}", userId);
+        // Modern tarayıcılar için kesin çözüm: Tüm session verilerini temizle komutu gönder
+        response.setHeader("Clear-Site-Data", "\"cookies\", \"storage\"");
+
+        if (userId != null) {
+            auditLogService.logWithRequest(userId, "USER_LOGOUT", "User", userId, null, null, request);
+            log.info("USER_LOGOUT: Successfully logged out userId: {}", userId);
+        } else {
+            log.info("ANONYMOUS_LOGOUT: Clearing cookies for unauthorized user");
+        }
     }
 
     // ────────────────────────────────────────────────

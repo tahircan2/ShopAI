@@ -63,10 +63,63 @@
       <label class="form-label">Etiketler (virgülle ayırın)</label>
       <input formControlName="tags" class="form-input" placeholder="spor, ayakkabı, nike" />
     </div>
+
+    <!-- ─── Image Upload Area ─────────────────────────────────────── -->
+    <div class="form-group" style="margin-top:16px">
+      <label class="form-label">Ürün Görselleri <span class="text-dim">(maks. 8, her biri maks. 10 MB)</span></label>
+
+      <div class="image-upload-zone"
+           (dragover)="onDragOver($event)"
+           (drop)="onDrop($event)"
+           (click)="fileInput.click()">
+        <div class="upload-icon">📸</div>
+        <p class="upload-text">Görselleri sürükleyip bırakın veya tıklayarak seçin</p>
+        <p class="upload-hint">JPEG, PNG, WebP, GIF — Maks. 10 MB</p>
+        <input #fileInput type="file" accept="image/jpeg,image/png,image/webp,image/gif"
+               multiple (change)="onFilesSelected($event)" hidden />
+      </div>
+
+      <!-- Existing images (edit mode) -->
+      @if (existingImages().length > 0) {
+        <div class="image-preview-section">
+          <span class="preview-label">Mevcut Görseller</span>
+          <div class="image-preview-grid">
+            @for (img of existingImages(); track img.id) {
+              <div class="image-preview-card">
+                <img [src]="img.imageUrl" [alt]="img.altText ?? 'Ürün görseli'" />
+                @if (img.isPrimary) {
+                  <span class="primary-badge">Ana</span>
+                }
+                <button type="button" class="remove-btn" (click)="removeExistingImage(editId()!, img.id)"
+                        title="Bu görseli sil">✕</button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- New image previews -->
+      @if (selectedImages().length > 0) {
+        <div class="image-preview-section">
+          <span class="preview-label">Yeni Görseller (kaydedildiğinde yüklenecek)</span>
+          <div class="image-preview-grid">
+            @for (preview of selectedImages(); track preview.url; let i = $index) {
+              <div class="image-preview-card new-image">
+                <img [src]="preview.url" alt="Yeni görsel" />
+                <button type="button" class="remove-btn" (click)="removeSelectedImage(i)"
+                        title="Bu görseli kaldır">✕</button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+
     <div style="display:flex;gap:8px;margin-top:16px">
       <button type="submit" class="btn btn-sm" style="background:var(--clr-accent);color:#fff;border:none"
-        [disabled]="saving()">
-        @if (saving()) { <span class="spinner"></span> } Kaydet
+        [disabled]="saving() || uploadingImages()">
+        @if (saving() || uploadingImages()) { <span class="spinner"></span> }
+        @if (uploadingImages()) { Resimler Yükleniyor... } @else { Kaydet }
       </button>
       <button type="button" class="btn btn-ghost btn-sm" (click)="closeForm()">İptal</button>
     </div>

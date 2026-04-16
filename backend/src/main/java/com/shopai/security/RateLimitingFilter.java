@@ -2,7 +2,6 @@ package com.shopai.security;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,8 +27,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     // Kapasite: 100 Token
     // Yenilenme: 1 dakikada 100 token geri dolacak şekilde
     private Bucket createNewBucket() {
-        Refill refill = Refill.intervally(100, Duration.ofMinutes(1));
-        Bandwidth limit = Bandwidth.classic(100, refill);
+        Bandwidth limit = Bandwidth.builder()
+                .capacity(100)
+                .refillIntervally(100, Duration.ofMinutes(1))
+                .build();
         return Bucket.builder()
                 .addLimit(limit)
                 .build();

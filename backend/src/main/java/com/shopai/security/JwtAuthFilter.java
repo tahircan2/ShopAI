@@ -1,5 +1,6 @@
 package com.shopai.security;
 
+import com.shopai.service.BlacklistService;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -30,6 +31,7 @@ import java.util.Optional;
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final BlacklistService blacklistService;
 
     @Value("${app.ai-service.internal-key}")
     private String internalKey;
@@ -47,7 +49,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (userIdStr != null && !userIdStr.isEmpty()) {
                 try {
                     Long userId = Long.parseLong(userIdStr);
-                    // Internal AI servisi okuma işlemleri(sipariş sorgulama vs) için varsayılan USER rolü ver
+                    // Internal AI servisi okuma işlemleri(sipariş sorgulama vs) için varsayılan
+                    // USER rolü ver
                     var authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
                     var authDetails = new JwtAuthDetails(userId, "internal@shopai.com", "USER");
                     var authentication = new UsernamePasswordAuthenticationToken(authDetails, null, authorities);
@@ -63,8 +66,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         String token = extractTokenFromCookie(request);
-
         if (token == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        // Kara liste kontrolü — logout yapılmış token'ları reddet
+        if (blacklistService.isBlacklisted(token)) {
+            log.debug("Rejecting blacklisted token for request: {}", request.getRequestURI());
             filterChain.doFilter(request, response);
             return;
         }
@@ -75,7 +84,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String role = jwtUtil.extractRole(token);
                 String email = jwtUtil.extractEmail(token);
 
-                // SecurityContext'e Authentication set et — role JWT imzasından gelir, client'tan DEĞİL
+                // SecurityContext'e Authentication set et — role JWT imzasından gelir,
+                // client'tan DEĞİL
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
                 var authDetails = new JwtAuthDetails(userId, email, role);
                 var authentication = new UsernamePasswordAuthenticationToken(authDetails, null, authorities);
@@ -101,7 +111,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
      * Authorization header'dan asla okumaz — güvenlik gereği.
      */
     private String extractTokenFromCookie(HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
+        if (request.getCookies() == null)
+            return null;
         return Arrays.stream(request.getCookies())
                 .filter(cookie -> "access_token".equals(cookie.getName()))
                 .map(Cookie::getValue)
@@ -113,9 +124,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
         // Public endpoint'lerde filter atla (performans için)
+        // Logout'u da ekliyoruz ki token expired
+        // olsa bile cookie'leri temizleyebilelim.
         return path.startsWith("/api/auth/login")
                 || path.startsWith("/api/auth/register")
                 || path.startsWith("/api/auth/refresh")
+                || path.startsWith("/api/auth/logout")
                 || path.startsWith("/api/auth/forgot-password")
                 || path.startsWith("/api/auth/reset-password")
                 || path.startsWith("/api/auth/verify-email")

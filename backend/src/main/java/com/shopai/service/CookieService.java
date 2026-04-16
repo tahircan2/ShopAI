@@ -70,39 +70,59 @@ public class CookieService {
     }
 
     /**
-     * Logout — her iki cookie'yi de sıfır MaxAge ile sil
+     * Logout — her iki cookie'yi de sıfır MaxAge ile hem domain'li hem domain'siz
+     * ve hem ana path hem de özel path'ler için temizle (Nuclear Clear).
      */
     public void clearAuthCookies(HttpServletResponse response) {
-        ResponseCookie accessCookie = ResponseCookie.from("access_token", "")
-                .httpOnly(true)
+        String[] paths = {"/api", "/api/auth/refresh", "/"};
+        String[] domains = {null, cookieDomain};
+
+        for (String path : paths) {
+            for (String domain : domains) {
+                if (domain != null && domain.isBlank()) continue;
+
+                // access_token temizle
+                response.addHeader("Set-Cookie", createDeleteCookie("access_token", path, domain));
+                // refresh_token temizle
+                response.addHeader("Set-Cookie", createDeleteCookie("refresh_token", path, domain));
+                // XSRF-TOKEN temizle ( Angular/Csrf için)
+                response.addHeader("Set-Cookie", createDeleteCookie("XSRF-TOKEN", path, domain));
+            }
+        }
+    }
+
+    private String createDeleteCookie(String name, String path, String domain) {
+        ResponseCookie.ResponseCookieBuilder builder = ResponseCookie.from(name, "")
+                .httpOnly(!name.equals("XSRF-TOKEN")) // XSRF-TOKEN JS tarafından okunabilmeli
                 .secure(secure)
                 .sameSite(sameSite)
-                .path("/api")
-                .maxAge(0)
-                .build();
+                .path(path)
+                .maxAge(0);
+        
+        if (domain != null && !domain.isBlank()) {
+            builder.domain(domain);
+        }
+        
+        return builder.build().toString();
+    }
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", "")
-                .httpOnly(true)
-                .secure(secure)
-                .sameSite(sameSite)
-                .path("/api/auth/refresh")
-                .maxAge(0)
-                .build();
-
-        response.addHeader("Set-Cookie", accessCookie.toString());
-        response.addHeader("Set-Cookie", refreshCookie.toString());
+    /**
+     * Request'ten belirtilen isimli cookie'yi okur
+     */
+    public String extractTokenFromCookie(jakarta.servlet.http.HttpServletRequest request, String name) {
+        if (request.getCookies() == null) return null;
+        for (Cookie cookie : request.getCookies()) {
+            if (name.equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+        return null;
     }
 
     /**
      * Request'ten refresh token cookie'sini okur
      */
     public String extractRefreshTokenFromCookie(jakarta.servlet.http.HttpServletRequest request) {
-        if (request.getCookies() == null) return null;
-        for (Cookie cookie : request.getCookies()) {
-            if ("refresh_token".equals(cookie.getName())) {
-                return cookie.getValue();
-            }
-        }
-        return null;
+        return extractTokenFromCookie(request, "refresh_token");
     }
 }

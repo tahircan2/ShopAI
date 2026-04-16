@@ -74,10 +74,12 @@ public class SecurityConfig {
                             "/api/auth/login",
                             "/api/auth/register",
                             "/api/auth/refresh",
+                            "/api/auth/logout",
                             "/api/auth/forgot-password",
                             "/api/auth/reset-password",
                             "/api/auth/verify-email",
-                            "/api/auth/resend-verification"))
+                            "/api/auth/resend-verification",
+                            "/api/admin/products/**"))
 
                 // Stateless — JWT cookie ile yönetilir
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -145,19 +147,6 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         return source;
-    }
-
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
     }
 
     @Bean

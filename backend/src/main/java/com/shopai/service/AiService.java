@@ -85,7 +85,7 @@ public class AiService {
                     .header("X-Internal-Key", internalKey) // servisler arası kimlik doğrulama
                     .bodyValue(buildPythonPayload(sanitizedMessage, req.getSessionId(), userId))
                     .retrieve()
-                    .bodyToMono(Map.class)
+                    .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                     .block();
         } catch (WebClientResponseException e) {
             log.error("AI service error: {} {}", e.getStatusCode(), e.getMessage());
@@ -137,6 +137,7 @@ public class AiService {
 
         // AI bir aksiyon aldıysa (sepete ekle vs.) bunu audit log'a işle
         if (actionTypeVal != null && !actionTypeVal.equalsIgnoreCase("none")) {
+            @SuppressWarnings("unchecked")
             Map<String, Object> actionData = (Map<String, Object>) pythonResponse.get("actionData");
             auditLogService.logEntityAction(userId, "AI_ACTION_" + actionTypeVal.toUpperCase(), 
                     null, actionData, "AiAction", conversation.getId(), request);
@@ -218,7 +219,7 @@ public class AiService {
         conversationRepository.save(conversation);
 
         if (actionType != null && !actionType.equalsIgnoreCase("none") && state.has("action_data")) {
-            Map<String, Object> actionData = objectMapper.convertValue(state.get("action_data"), Map.class);
+            Map<String, Object> actionData = objectMapper.convertValue(state.get("action_data"), new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
             auditLogService.logEntityAction(userId, "AI_ACTION_" + actionType.toUpperCase(), 
                     null, actionData, "AiAction", conversation.getId(), request);
         }
