@@ -235,7 +235,7 @@ export interface ChatMessage {
   content: string;
   agentType?: string;
   actionType?: AgentActionType;
-  actionData?: AgentActionResult;
+  actionData?: any;
   isInjectionDetected?: boolean;
   createdAt: string;
 }

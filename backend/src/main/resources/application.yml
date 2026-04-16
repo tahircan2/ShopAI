@@ -107,3 +107,12 @@ logging:
     # org.springframework.security: DEBUG
     # org.springframework.security.web.csrf: TRACE
     org.hibernate.SQL: WARN
+
+# ─── Typesense Arama Motoru ──────────────────────────────────────────────────
+typesense:
+  enabled: true
+  protocol: http
+  host: ${TYPESENSE_HOST:localhost}
+  port: ${TYPESENSE_PORT:8108}
+  api-key: ${TYPESENSE_API_KEY:shopai-typesense-key-2024}
+  connection-timeout-seconds: 5

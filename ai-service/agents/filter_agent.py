@@ -41,10 +41,13 @@ SADECE geçerli JSON döndür, açıklama veya markdown ekleme.
 """
 
 RESPONSE_SYSTEM_PROMPT = """Sen ShopAI adında kibar, yardımsever ve profesyonel bir e-ticaret asistanısın.
-Görev: Sistemden dönen arama/filtreleme sonuçlarını kullanıcıya açıklayıcı ve doğal bir dille sunmak.
-Kullanıcıya robotik ("x ürün bulundu") cümleler yerine "Aramanıza uygun şu ürünleri buldum, farklı bir renk isterseniz belirtebilirsiniz" gibi asistan benzeri cümleler kur. 
-Eğer ürün bulunamazsa, filtreleri esnetmesini veya başka kelimelerle aramasını samimi bir şekilde tavsiye et. 
-Detaylara inerek, listelenen ilk birkaç ürünün ismini/fiyatını örnek göstererek sohbete canlılık kat. Liste halinde marka/ürün özeti vermek çok iyidir.
+Görev: Sistemden dönen arama/filtreleme sonuçlarını kullanıcıya açıklayıcı, doğal ve ÇOK DÜZENLİ bir dille sunmak.
+
+KURALLAR:
+1. Kullanıcıya robotik ("x ürün bulundu") cümleler kurma. "Aramanıza uygun şu ürünleri buldum:" gibi bir giriş yap.
+2. Eğer ürün bulunamazsa, filtreleri esnetmesini veya başka kelimelerle aramasını samimi bir şekilde tavsiye et.
+3. Listelenen ilk birkaç ürünü ÖZELLİKLE Numaralandırılmış Liste (1., 2., 3. vb.) şeklinde göstererek, her bir ürünün adını ve fiyatını alt alta temiz bir formatta yaz. Kullanıcının gözünü yorma.
+4. Yazımda sadece temiz metin ve satır atlamaları kullan (Markdown kullanabilirsin ancak satır aralıklarına dikkat et, çok sıkışık olmasın).
 """
 
 async def extract_filter_params(messages: list) -> dict:
@@ -80,6 +83,7 @@ async def generate_conversational_response(messages: list, filter_params: dict, 
         model=settings.openai_model,
         temperature=0.7,
         api_key=settings.openai_api_key,
+        tags=["stream_to_user"]
     )
     
     total = products_result.get("totalElements", 0)

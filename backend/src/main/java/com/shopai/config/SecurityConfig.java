@@ -97,7 +97,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // AI endpoint — anonim kullanıcı da chatbot kullanabilir
-                        .requestMatchers("/api/ai/chat").permitAll()
+                        .requestMatchers("/api/ai/chat", "/api/ai/chat/stream").permitAll()
 
                         // Geri kalanlar: login zorunlu
                         .anyRequest().authenticated())

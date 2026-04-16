@@ -46,6 +46,21 @@ public class AiController {
         return ResponseEntity.ok(aiService.chat(req, userId, ip, request));
     }
 
+    @PostMapping(value = "/chat/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "Chatbot mesajı gönder (Streaming)")
+    public reactor.core.publisher.Flux<org.springframework.http.codec.ServerSentEvent<String>> chatStream(
+            @AuthenticationPrincipal JwtAuthDetails authDetails,
+            @Valid @RequestBody ChatRequest req,
+            HttpServletRequest request) {
+
+        Long userId = authDetails != null ? authDetails.getUserId() : null;
+        String ip = request.getHeader("X-Forwarded-For") != null
+                ? request.getHeader("X-Forwarded-For").split(",")[0].trim()
+                : request.getRemoteAddr();
+
+        return aiService.chatStream(req, userId, ip, request);
+    }
+
     @GetMapping("/conversations/{sessionId}")
     @Operation(summary = "Konuşma geçmişi — ownership check yapılır")
     public ResponseEntity<Map<String, Object>> getConversation(

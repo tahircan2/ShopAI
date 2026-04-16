@@ -115,14 +115,20 @@ export class ProductDetailComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const slug = this.route.snapshot.paramMap.get('slug') ?? '';
+    this.route.paramMap.subscribe(params => {
+      const slug = params.get('slug') ?? '';
+      this.loadProduct(slug);
+    });
+  }
+
+  loadProduct(slug: string): void {
+    this.loading.set(true);
     this.productService.getProductBySlug(slug).subscribe({
       next: (p) => {
         this.product.set(p);
         this.loading.set(false);
         this.loadReviews(p.id);
 
-        // Seçecekleri URL'den veya varsayılanlardan al
         const qp = this.route.snapshot.queryParamMap;
         const color = qp.get('color');
         const size = qp.get('size');
@@ -131,11 +137,19 @@ export class ProductDetailComponent implements OnInit {
           this.selectedColor.set(color);
         } else if (this.colorOptions().length > 0) {
           this.selectedColor.set(this.colorOptions()[0].color ?? null);
+        } else {
+          this.selectedColor.set(null); // Reset color on new product
         }
 
         if (size) {
           this.selectedSize.set(size);
+        } else {
+          this.selectedSize.set(null); // Reset size on new product
         }
+        
+        // Reset qty
+        this.qty.set(1);
+        this.selectedImageIndex.set(0);
 
         const focus = qp.get('focus');
         if (focus === 'size') {

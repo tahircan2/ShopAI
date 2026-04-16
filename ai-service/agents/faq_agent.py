@@ -83,6 +83,7 @@ async def faq_agent_node(state: AgentState) -> AgentState:
         model=settings.openai_model,
         temperature=0.3,
         api_key=settings.openai_api_key,
+        tags=["stream_to_user"]
     )
 
     try:

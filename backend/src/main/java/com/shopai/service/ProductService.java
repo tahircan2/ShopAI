@@ -12,8 +12,12 @@ import com.shopai.exception.ConflictException;
 import com.shopai.exception.ForbiddenException;
 import com.shopai.exception.ResourceNotFoundException;
 import com.shopai.repository.*;
+import com.shopai.service.TypesenseProductService.TypesenseSearchResult;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,6 +34,7 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ProductService {
 
     private final ProductRepository productRepository;
@@ -38,6 +43,10 @@ public class ProductService {
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
     private final AuditLogService auditLogService;
+
+    // Opsiyonel — typesense.enabled=false ise null olur, uygulama çalışmaya devam eder
+    @Autowired(required = false)
+    private TypesenseProductService typesenseProductService;
 
     // ─── Ürün Listesi (filtreli, sayfalı) ───────────────────────────────────
     @Transactional(readOnly = true)
@@ -59,6 +68,21 @@ public class ProductService {
             }
         }
 
+        // ====== TYPESENSE INTEGRATION FOR FILTER ENDPOINT ======
+        // Eğer arama (q) parametresi varsa, bu terimi önce Typesense'e gönder, 
+        // sonrasında Typesense'in bize döndüğü productId eşleşmelerini kullanarak JPA filtresini uygula.
+        if (filter.getQ() != null && !filter.getQ().isBlank() && typesenseProductService != null) {
+            try {
+                // Typo-tolerant aramayı çalıştırıp en iyi 200 eşleşen ID'yi alıyoruz
+                var tsResult = typesenseProductService.search(filter.getQ().trim(), 0, 200);
+                filter.setProductIds(tsResult.productIds() == null ? java.util.List.of() : tsResult.productIds());
+                filter.setQ(null); // q'yu nullluyoruz ki ProductSpecification klasik %LIKE% araması YAPMASIN
+            } catch (Exception e) {
+                log.warn("Typesense filter araması başarısız, MySQL fallback q-like yapılıyor: {}", e.getMessage());
+            }
+        }
+        // =======================================================
+
         Pageable pageable = PageRequest.of(
                 filter.getPage() != null ? filter.getPage() : 0,
                 filter.getSize() != null ? Math.min(filter.getSize(), 50) : 20
@@ -76,11 +100,39 @@ public class ProductService {
                 .map(ProductSummaryResponse::from);
     }
 
-    // ─── Ürün Arama ─────────────────────────────────────────────────────────
+    // ─── Ürün Arama (Typesense ile typo-tolerant, MySQL fallback) ────────────
     @Transactional(readOnly = true)
     public Page<ProductSummaryResponse> search(String q, int page, int size) {
         if (q == null || q.isBlank()) throw new BadRequestException("Arama terimi boş olamaz");
-        Pageable pageable = PageRequest.of(page, Math.min(size, 50));
+        int safeSize = Math.min(size, 50);
+        Pageable pageable = PageRequest.of(page, safeSize);
+
+        // Typesense varsa onu kullan (typo-tolerant + hızlı)
+        if (typesenseProductService != null) {
+            try {
+                TypesenseSearchResult tsResult = typesenseProductService.search(q.trim(), page, safeSize);
+                if (!tsResult.productIds().isEmpty()) {
+                    // Typesense'den gelen ID'lerle MySQL'den tam veri çek
+                    List<Product> products = productRepository.findAllById(tsResult.productIds());
+                    // Typesense sıralamasını koru
+                    Map<Long, Product> productMap = new java.util.LinkedHashMap<>();
+                    products.forEach(p -> productMap.put(p.getId(), p));
+                    List<ProductSummaryResponse> ordered = tsResult.productIds().stream()
+                            .map(productMap::get)
+                            .filter(java.util.Objects::nonNull)
+                            .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
+                            .map(ProductSummaryResponse::from)
+                            .toList();
+                    return new PageImpl<>(ordered, pageable, tsResult.totalFound());
+                }
+                // Typesense sonuç dönmediyse boş sayfa dön
+                return new PageImpl<>(List.of(), pageable, 0);
+            } catch (Exception e) {
+                log.warn("Typesense araması başarısız, MySQL fallback kullanılıyor: {}", e.getMessage());
+            }
+        }
+
+        // Fallback: MySQL LIKE araması
         return productRepository.searchByKeyword(q.trim(), pageable)
                 .map(ProductSummaryResponse::from);
     }
@@ -199,6 +251,9 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
         auditLogService.logEntityAction(sellerId, "PRODUCT_CREATE", null, saved, "Product", saved.getId(), request);
+
+        // Typesense'e indexle
+        indexToTypesense(saved);
         
         return ProductResponse.from(saved);
     }
@@ -237,6 +292,9 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
         auditLogService.logEntityAction(userId, "PRODUCT_UPDATE", oldProduct, saved, "Product", id, request);
+
+        // Typesense'i güncelle
+        indexToTypesense(saved);
         
         return ProductResponse.from(saved);
     }
@@ -255,6 +313,9 @@ public class ProductService {
         
         product.setIsActive(false); // soft delete
         productRepository.save(product);
+
+        // Typesense'den sil
+        removeFromTypesense(id);
     }
 
     // ─── Stats ───────────────────────────────────────────────────────────────
@@ -318,6 +379,11 @@ public class ProductService {
                 ? BigDecimal.valueOf(avg).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         productRepository.updateRating(productId, avgDecimal, count != null ? count.intValue() : 0);
+
+        // Rating değiştiğinde Typesense'i de güncelle
+        productRepository.findById(productId)
+                .filter(Product::getIsActive)
+                .ifPresent(this::indexToTypesense);
     }
 
     private String toSlug(String name) {
@@ -342,6 +408,28 @@ public class ProductService {
                 if (child != null && Boolean.TRUE.equals(child.getIsActive())) {
                     collectCategoryIds(child, ids);
                 }
+            }
+        }
+    }
+
+    // ─── Typesense Yardımcı Metotları ───────────────────────────────────────
+
+    private void indexToTypesense(Product product) {
+        if (typesenseProductService != null) {
+            try {
+                typesenseProductService.indexProduct(product);
+            } catch (Exception e) {
+                log.error("Typesense index hatası (ürün #{}): {}", product.getId(), e.getMessage());
+            }
+        }
+    }
+
+    private void removeFromTypesense(Long productId) {
+        if (typesenseProductService != null) {
+            try {
+                typesenseProductService.removeProduct(productId);
+            } catch (Exception e) {
+                log.error("Typesense silme hatası (ürün #{}): {}", productId, e.getMessage());
             }
         }
     }

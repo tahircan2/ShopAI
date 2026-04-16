@@ -20,6 +20,10 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import reactor.core.publisher.Flux;
+import org.springframework.http.codec.ServerSentEvent;
 
 @Slf4j
 @Service
@@ -37,6 +41,8 @@ public class AiService {
 
     @Value("${app.ai-service.internal-key}")
     private String internalKey;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Angular → Spring Boot → Python AI proxy.
@@ -137,6 +143,85 @@ public class AiService {
         }
 
         return pythonResponse instanceof HashMap ? pythonResponse : new HashMap<>(pythonResponse);
+    }
+
+    /**
+     * AI Streaming işlemi. Frontend SSE akışını buradan okur.
+     */
+    public Flux<ServerSentEvent<String>> chatStream(ChatRequest req, Long userId, String ip, jakarta.servlet.http.HttpServletRequest request) {
+        String sanitizedMessage = sanitizeMessage(req.getMessage());
+        AiConversation conversation = getOrCreateConversation(req.getSessionId(), userId);
+
+        AiMessage userMessage = AiMessage.builder()
+                .conversation(conversation)
+                .role(AiMessage.MessageRole.user)
+                .content(sanitizedMessage)
+                .build();
+        messageRepository.save(userMessage);
+
+        conversation.setLastMessageAt(LocalDateTime.now());
+        conversation.setMessageCount(conversation.getMessageCount() + 1);
+        conversationRepository.save(conversation);
+
+        return webClientBuilder.build()
+                .post()
+                .uri(aiServiceUrl + "/chat/stream")
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .header("X-Authenticated-User-Id", userId != null ? String.valueOf(userId) : "")
+                .header("X-Internal-Key", internalKey)
+                .bodyValue(buildPythonPayload(sanitizedMessage, req.getSessionId(), userId))
+                .retrieve()
+                .bodyToFlux(new org.springframework.core.ParameterizedTypeReference<ServerSentEvent<String>>() {})
+                .doOnNext(sse -> {
+                    try {
+                        String data = sse.data();
+                        if (data != null) {
+                            JsonNode node = objectMapper.readTree(data);
+                            if (node.has("type") && "state".equals(node.get("type").asText())) {
+                                JsonNode state = node.get("state");
+                                saveAssistantMessageAndAudit(conversation, state, userId, ip, request);
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.error("AI stream parse error", e);
+                    }
+                })
+                .onErrorResume(e -> {
+                    log.error("AI service error: {}", e.getMessage());
+                    return Flux.empty();
+                });
+    }
+
+    private void saveAssistantMessageAndAudit(AiConversation conversation, JsonNode state, Long userId, String ip, jakarta.servlet.http.HttpServletRequest request) {
+        boolean injectionDetected = state.has("injection_detected") && state.get("injection_detected").asBoolean();
+        if (injectionDetected) {
+            Map<String, String> logData = Map.of("blockedResponse", state.get("message").asText());
+            auditLogService.logWithMap(userId, "INJECTION_DETECTED", "AiConversation",
+                    conversation.getId(), logData, null, ip, request.getHeader("User-Agent"));
+            log.warn("Prompt injection detected! userId={}, sessionId={}", userId, conversation.getSessionId());
+        }
+
+        String actionType = state.has("action_type") && !state.get("action_type").isNull() ? state.get("action_type").asText() : null;
+        String agentType = state.has("agent_type") && !state.get("agent_type").isNull() ? state.get("agent_type").asText() : null;
+
+        AiMessage assistantMessage = AiMessage.builder()
+                .conversation(conversation)
+                .role(AiMessage.MessageRole.assistant)
+                .content(state.has("message") ? state.get("message").asText() : "")
+                .agentType(agentType)
+                .actionType(actionType)
+                .isInjectionDetected(injectionDetected)
+                .build();
+        messageRepository.save(assistantMessage);
+
+        conversation.setMessageCount(conversation.getMessageCount() + 1);
+        conversationRepository.save(conversation);
+
+        if (actionType != null && !actionType.equalsIgnoreCase("none") && state.has("action_data")) {
+            Map<String, Object> actionData = objectMapper.convertValue(state.get("action_data"), Map.class);
+            auditLogService.logEntityAction(userId, "AI_ACTION_" + actionType.toUpperCase(), 
+                    null, actionData, "AiAction", conversation.getId(), request);
+        }
     }
 
     // ─── Konuşma Geçmişi (ownership check) ──────────────────────────────────

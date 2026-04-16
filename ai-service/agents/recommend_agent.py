@@ -68,6 +68,7 @@ async def generate_recommendation_response(message: str, products: list) -> str:
         model=settings.openai_model,
         temperature=0.7,
         api_key=settings.openai_api_key,
+        tags=["stream_to_user"]
     )
 
     product_summary = "\n".join([

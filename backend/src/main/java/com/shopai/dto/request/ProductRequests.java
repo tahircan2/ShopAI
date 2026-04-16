@@ -57,6 +57,7 @@ public class ProductRequests {
         private Long categoryId;
         private String categorySlug;   // Frontend sends category slug instead of ID
         private List<Long> categoryIds; // Populated by backend for recursive search
+        private List<Long> productIds; // Populated by Typesense search bridge
         private String q;              // Free-text keyword search
         private BigDecimal minPrice;
         private BigDecimal maxPrice;

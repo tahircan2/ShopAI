@@ -37,22 +37,72 @@ export class AiChatService {
     return INJECTION_PATTERNS.some(p => p.test(message));
   }
 
-  sendMessage(text: string): Observable<ChatResponse> {
+  sendMessageStream(text: string): Observable<any> {
     const req: ChatRequest = {
       sessionId: this.sessionId(),
       message: text
-      // userId is NOT sent - backend gets it from JWT cookie
     };
 
-    this.isTyping.set(true);
-    return this.http.post<ChatResponse>(this.api, req).pipe(
-      tap({
-        next: (res) => {
-          this.isTyping.set(false);
-          this.handleAgentAction(res);
+    return new Observable(observer => {
+      this.isTyping.set(true);
+      let processedIndex = 0;
+
+      const subscription = this.http.post(`${this.api}/stream`, req, {
+        headers: { 'X-Silent': 'true' },
+        observe: 'events',
+        reportProgress: true,
+        responseType: 'text'
+      }).subscribe({
+        next: (event: any) => {
+          if (event.type === 2) { // HttpEventType.ResponseHeader
+            // Do not clear typing here; wait for actual data!
+          } else if (event.type === 3) { // HttpEventType.DownloadProgress
+            const partialText = event.partialText || '';
+            const newText = partialText.substring(processedIndex);
+            const parts = newText.split('\n\n');
+            
+            if (parts.length > 1) {
+              const completeParts = parts.slice(0, parts.length - 1);
+              completeParts.forEach((part: string) => {
+                processedIndex += part.length + 2;
+                const dataLine = part.split('\n').find((line: string) => line.startsWith('data:'));
+                if (dataLine) {
+                  try {
+                    const rawJson = dataLine.replace(/^data:\s*/, '');
+                    const parsed = JSON.parse(rawJson);
+                    this.isTyping.set(false);
+                    observer.next(parsed);
+                  } catch (e) {}
+                }
+              });
+            }
+          } else if (event.type === 4) { // HttpEventType.Response
+            this.isTyping.set(false);
+            const bodyText = event.body as string;
+            if (processedIndex < bodyText.length) {
+              const remaining = bodyText.substring(processedIndex);
+              const parts = remaining.split('\n\n');
+              parts.forEach((part: string) => {
+                const dataLine = part.split('\n').find((line: string) => line.startsWith('data:'));
+                if (dataLine) {
+                  try {
+                    const rawJson = dataLine.replace(/^data:\s*/, '');
+                    const parsed = JSON.parse(rawJson);
+                    this.isTyping.set(false);
+                    observer.next(parsed);
+                  } catch (e) {}
+                }
+              });
+            }
+            observer.complete();
+          }
         },
-        error: () => this.isTyping.set(false)
-      })
+        error: (err) => observer.error(err)
+      });
+
+      return () => subscription.unsubscribe();
+    }).pipe(
+      tap({ finalize: () => this.isTyping.set(false) })
     );
   }
 
@@ -66,29 +116,32 @@ export class AiChatService {
     );
   }
 
-  addLocalMessage(role: 'user' | 'assistant', content: string): void {
+  addLocalMessage(
+    role: 'user' | 'assistant', 
+    content: string, 
+    actionType?: import('../models/product.model').AgentActionType,
+    actionData?: any,
+    isInjectionDetected?: boolean
+  ): void {
     const msg: ChatMessage = {
       id: Date.now(),
       role,
       content,
+      actionType,
+      actionData,
+      isInjectionDetected,
       createdAt: new Date().toISOString()
     };
     this.messages.update(ms => [...ms, msg]);
   }
 
-  private handleAgentAction(res: ChatResponse): void {
+  handleAgentAction(res: any): void {
     if (!res.actionType || !res.actionData) return;
 
     switch (res.actionType) {
       case 'PRODUCT_LIST': {
-        // Python filter_agent: actionData = { filters: {...}, products: { content: [...], ... } }
-        // Python recommend_agent: actionData = { products: { content: [...], ... }, recommendation_type: "..." }
-        const productData = res.actionData?.products;
-        const products = (productData?.content ?? productData) as import('../models/product.model').ProductSummary[];
-        if (products?.length) {
-          this.productService.applyAiFilter(products);
-          this.router.navigate(['/products']);
-        }
+        // Otomatik yönlendirmeyi kaldırıp chat ekranında göstereceğiz
+        // chatbot component'i mesajın actionType'ı sayesinde ürünleri listeleyecek
         break;
       }
       case 'CART_UPDATED': {

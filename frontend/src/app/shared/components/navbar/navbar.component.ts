@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../../core/services/auth.service';
 import { CartService } from '../../../core/services/cart.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { ProductService } from '../../../core/services/product.service';
 
 @Component({
   selector: 'app-navbar',
@@ -16,6 +17,7 @@ export class NavbarComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly cartService = inject(CartService);
   private readonly toast = inject(ToastService);
+  private readonly productService = inject(ProductService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
@@ -62,6 +64,7 @@ export class NavbarComponent implements OnInit {
   }
 
   doSearch(): void {
+    this.productService.clearAiFilter();
     const q = this.searchQuery.trim();
     if (q) {
       this.router.navigate(['/products'], { queryParams: { q } });

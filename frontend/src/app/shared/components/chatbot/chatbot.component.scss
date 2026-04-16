@@ -194,12 +194,24 @@
   flex-shrink: 0;
 }
 
-.msg-bubble {
+.msg-content-wrapper {
+  display: flex;
+  flex-direction: column;
   max-width: 80%;
+
+  .user & {
+    align-items: flex-end;
+  }
+}
+
+.msg-bubble {
+  max-width: 100%;
   padding: 10px 13px;
   border-radius: var(--radius-lg);
   font-size: 13px;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
 
   .user & {
     background: var(--clr-primary);
@@ -315,5 +327,82 @@
   .chat-toggle {
     bottom: 16px;
     right: 16px;
+  }
+}
+
+.chat-products {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.chat-product-card {
+  display: flex;
+  gap: 10px;
+  background-color: var(--clr-surface-2);
+  border: 1px solid var(--clr-border);
+  border-radius: var(--radius-md);
+  padding: 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+  align-items: center;
+
+  &:hover {
+    background-color: var(--clr-surface-3);
+    border-color: var(--clr-primary);
+  }
+
+  .cp-img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    background-color: #fff;
+  }
+
+  .cp-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+    overflow: hidden;
+
+    .cp-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--clr-text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .cp-price {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--clr-primary);
+    }
+  }
+}
+
+.cp-show-all-btn {
+  width: 100%;
+  padding: 8px 12px;
+  background-color: rgba(124, 111, 247, 0.1);
+  color: var(--clr-primary);
+  border: 1px dashed var(--clr-primary);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition);
+  margin-top: 4px;
+  font-family: var(--font-sans);
+
+  &:hover {
+    background-color: var(--clr-primary);
+    color: white;
   }
 }

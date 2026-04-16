@@ -114,6 +114,7 @@ async def supervisor_respond(state: AgentState) -> AgentState:
         model=settings.openai_model,
         temperature=0.7,
         api_key=settings.openai_api_key,
+        tags=["stream_to_user"]
     )
 
     # Konuşma geçmişini dahil et (son N mesaj)

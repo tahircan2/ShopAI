@@ -55,11 +55,31 @@
             @if (msg.role === 'assistant') {
               <div class="bot-avatar">AI</div>
             }
-            <div class="msg-bubble" [class.injection-warn]="msg.isInjectionDetected">
-              @if (msg.isInjectionDetected) {
-                <div class="warn-badge">⚠️ Güvenlik uyarısı</div>
+            <div class="msg-content-wrapper">
+              <div class="msg-bubble" [class.injection-warn]="msg.isInjectionDetected">
+                @if (msg.isInjectionDetected) {
+                  <div class="warn-badge">⚠️ Güvenlik uyarısı</div>
+                }
+                {{ msg.content }}
+              </div>
+              @if (msg.actionType === 'PRODUCT_LIST' && getTop3Products(msg.actionData).length > 0) {
+                <div class="chat-products">
+                  @for (prod of getTop3Products(msg.actionData); track prod.id) {
+                    <div class="chat-product-card" (click)="goToProductDetail(prod.slug); open.set(false)">
+                      <img [src]="prod.primaryImageUrl || 'assets/images/placeholder.jpg'" alt="{{ prod.name }}" class="cp-img" />
+                      <div class="cp-info">
+                        <div class="cp-name">{{ prod.name }}</div>
+                        <div class="cp-price">{{ prod.price }} ₺</div>
+                      </div>
+                    </div>
+                  }
+                  @if (hasMoreProducts(msg.actionData)) {
+                    <button class="cp-show-all-btn" (click)="showAllProducts(msg.actionData)">
+                      Tümünü Göster
+                    </button>
+                  }
+                </div>
               }
-              {{ msg.content }}
             </div>
           </div>
         }

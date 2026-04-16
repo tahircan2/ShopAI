@@ -119,6 +119,13 @@
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
 
+        <!-- Typesense Search Engine Client -->
+        <dependency>
+            <groupId>org.typesense</groupId>
+            <artifactId>typesense-java</artifactId>
+            <version>1.3.0</version>
+        </dependency>
+
         <!-- Jackson Hibernate Modules -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>

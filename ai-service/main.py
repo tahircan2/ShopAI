@@ -20,13 +20,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+import json
 
 from config import settings
 from models.schemas import ChatRequest, ChatResponse, HealthResponse
 from security.prompt_guard import check_injection
 from security.rate_limiter import rate_limiter
-from graph.agent_graph import run_agent, get_graph
+from graph.agent_graph import stream_agent, get_graph
 
 # -------------------------------------------------------
 # Logging yapılandırması
@@ -127,96 +128,66 @@ async def health_check() -> HealthResponse:
     return HealthResponse()
 
 
-@app.post("/chat", response_model=ChatResponse, response_model_by_alias=True, tags=["Chat"])
-async def chat(
+@app.post("/chat/stream", tags=["Chat"])
+async def chat_stream(
     request: ChatRequest,
     x_authenticated_user_id: str | None = Header(
         default=None,
         alias="X-Authenticated-User-Id",
-        description="Spring Boot'un JWT'den extract ettiği kullanıcı ID'si. "
-                    "Anonim kullanıcılar için None.",
+        description="Spring Boot'un JWT'den extract ettiği kullanıcı ID'si",
     ),
-) -> ChatResponse:
-    """
-    Ana chat endpoint'i.
-
-    Spring Boot bu endpoint'i proxy olarak çağırır.
-    userId ASLA request body'den alınmaz — yalnızca X-Authenticated-User-Id header'ından.
-
-    İşlem sırası:
-    1. Rate limit kontrolü (session bazlı)
-    2. Prompt injection kontrolü (3 katman — bu katman: kural + LLM)
-    3. LangGraph agent pipeline
-    4. Yanıtı döndür
-    """
+):
     session_id = request.session_id
     message = request.message
-
-    # user_id: Spring Boot'un doğruladığı JWT'den — kullanıcı girdisinden ASLA değil
     user_id = x_authenticated_user_id
 
-    logger.info(
-        "chat_request_received",
-        session_id=session_id,
-        user_id=user_id,
-        message_length=len(message),
-    )
+    logger.info("chat_stream_request", session_id=session_id)
 
-    # ---- 1. Rate Limit Kontrolü ----
+    # 1. Rate Limit Kontrolü
     allowed, retry_after = await rate_limiter.is_allowed(session_id)
     if not allowed:
-        logger.warning("rate_limit_hit", session_id=session_id, retry_after=retry_after)
         raise HTTPException(
             status_code=429,
-            detail={
-                "message": "Çok fazla mesaj gönderdiniz. Lütfen bir süre bekleyin.",
-                "retry_after": retry_after,
-            },
-            headers={"Retry-After": str(retry_after)},
+            detail={"message": "Çok fazla mesaj gönderdiniz", "retry_after": retry_after},
         )
 
-    # ---- 2. Prompt Injection Kontrolü (Katman 3) ----
+    # 2. Prompt Injection Kontrolü
     injection_detected, safe_response = await check_injection(message)
-
     if injection_detected:
-        logger.warning(
-            "injection_blocked",
-            session_id=session_id,
-            user_id=user_id,
-            message_preview=message[:100],
-        )
-        # Audit log için Spring Boot'a bildirim (fire-and-forget)
-        # Not: Bu kısmı genişletmek için AuditNotifier servisi eklenebilir
-        return ChatResponse(
-            message=safe_response,
-            agent_type="security",
-            action_type=None,
-            action_data=None,
-            injection_detected=True,
-            session_id=session_id,
-            intent="BLOCKED",
-        )
+        async def mock_stream():
+            yield f"data: {json.dumps({'type': 'token', 'content': safe_response})}\n\n"
+            final_res = {
+                "message": safe_response,
+                "agent_type": "security",
+                "action_type": None,
+                "action_data": None,
+                "injection_detected": True,
+                "session_id": session_id,
+                "intent": "BLOCKED",
+            }
+            yield f"data: {json.dumps({'type': 'state', 'state': final_res})}\n\n"
+        return StreamingResponse(mock_stream(), media_type="text/event-stream")
 
-    # ---- 3. LangGraph Agent Pipeline ----
-    final_state = await run_agent(
-        message=message,
-        session_id=session_id,
-        user_id=user_id,
-        conversation_history=None,  # Spring Boot geçmişi ayrıca geçirebilir
-    )
+    # 3. LangGraph Streaming Pipeline
+    async def langgraph_stream():
+        async for chunk in stream_agent(message, session_id, user_id):
+            if chunk["type"] == "token":
+                yield f"data: {json.dumps({'type': 'token', 'content': chunk['content']})}\n\n"
+            elif chunk["type"] == "state":
+                final_state = chunk["state"]
+                response_message = final_state.get("final_response") or "Bir sorun oluştu."
+                final_res = {
+                    "message": response_message,
+                    "agent_type": final_state.get("agent_type"),
+                    "action_type": final_state.get("action_type"),
+                    "action_data": final_state.get("action_data"),
+                    "injection_detected": final_state.get("injection_detected", False),
+                    "session_id": session_id,
+                    "intent": final_state.get("intent"),
+                }
+                yield f"data: {json.dumps({'type': 'state', 'state': final_res})}\n\n"
 
-    # ---- 4. Yanıtı Döndür ----
-    response_message = final_state.get("final_response") or "Bir sorun oluştu, lütfen tekrar deneyin."
-
-    return ChatResponse(
-        message=response_message,
-        agent_type=final_state.get("agent_type"),
-        action_type=final_state.get("action_type"),
-        action_data=final_state.get("action_data"),
-        injection_detected=final_state.get("injection_detected", False),
-        session_id=session_id,
-        intent=final_state.get("intent"),
-    )
+    return StreamingResponse(langgraph_stream(), media_type="text/event-stream")
 
 
 # -------------------------------------------------------

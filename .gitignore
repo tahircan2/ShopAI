@@ -35,3 +35,6 @@ frontend/.sass-cache/
 frontend/connect.lock
 frontend/coverage/
 frontend/typings/
+
+# Docker volumes
+typesense-data/

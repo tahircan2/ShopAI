@@ -97,14 +97,15 @@ def get_graph():
     return _compiled_graph
 
 
-async def run_agent(
+async def stream_agent(
     message: str,
     session_id: str,
     user_id: str | None,
     conversation_history: list[dict] | None = None,
-) -> AgentState:
+):
     """
-    Ana agent çalıştırma fonksiyonu.
+    Ana agent çalıştırma fonksiyonu (Streaming).
+    Önce LLM'den gelen tokenleri (chunk), ardından en son olarak güncellenmiş AgentState'i yield eder.
 
     Args:
         message: Kullanıcı mesajı (sanitize edilmiş, Spring Boot'tan gelmiş)
@@ -112,8 +113,8 @@ async def run_agent(
         user_id: JWT'den extract edilen kullanıcı ID'si (None = anonim)
         conversation_history: Geçmiş mesajlar (DB'den — {role, content} listesi)
 
-    Returns:
-        Tamamlanmış AgentState
+    Yields:
+        {"type": "token", "content": "..."} veya {"type": "state", "state": AgentState}
     """
     graph = get_graph()
 
@@ -156,27 +157,39 @@ async def run_agent(
     )
 
     try:
-        final_state = await graph.ainvoke(
+        final_state = None
+        
+        async for mode, payload in graph.astream(
             initial_state,
+            stream_mode=["messages", "values"],
             config={"recursion_limit": settings.langgraph_recursion_limit},
-        )
+        ):
+            if mode == "messages":
+                chunk, metadata = payload
+                # Yalnızca içeriği olan ve tool call içermeyen (yani kullanıcıya dönen) chunkları al
+                if chunk.content and not getattr(chunk, "tool_calls", None) and getattr(chunk, "type", "") == "AIMessageChunk":
+                    if "stream_to_user" in metadata.get("tags", []):
+                        yield {"type": "token", "content": str(chunk.content)}
+            elif mode == "values":
+                final_state = payload
 
-        logger.info(
-            "agent_run_complete",
-            session_id=session_id,
-            agent_type=final_state.get("agent_type"),
-            intent=final_state.get("intent"),
-            action_type=final_state.get("action_type"),
-        )
-
-        return final_state
+        if final_state:
+            logger.info(
+                "agent_run_complete",
+                session_id=session_id,
+                agent_type=final_state.get("agent_type"),
+                intent=final_state.get("intent"),
+                action_type=final_state.get("action_type"),
+            )
+            yield {"type": "state", "state": final_state}
 
     except Exception as e:
         logger.error("agent_run_error", session_id=session_id, error=str(e))
-        # Hata state'i döndür — uygulama çökmez
-        return {
+        # Hata state'i döndür
+        error_state = {
             **initial_state,
             "final_response": "Bir hata oluştu. Lütfen tekrar deneyin.",
             "agent_type": "error",
             "error": str(e),
         }
+        yield {"type": "state", "state": error_state}

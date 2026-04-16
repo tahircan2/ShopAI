@@ -3,12 +3,12 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProductService } from '../../../../core/services/product.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { Category } from '../../../../core/models/product.model';
-import { NgIf, NgStyle, NgClass } from '@angular/common';
+import { NgIf, NgStyle } from '@angular/common';
 
 @Component({
   selector: 'app-admin-categories',
   standalone: true,
-  imports: [ReactiveFormsModule, NgIf, NgStyle, NgClass],
+  imports: [ReactiveFormsModule, NgIf, NgStyle],
   templateUrl: './admin-categories.component.html',
   styleUrl: './admin-categories.component.scss'
 })

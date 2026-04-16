@@ -19,8 +19,16 @@ public class ProductSpecification {
             // Sadece aktif ürünler
             predicates.add(cb.isTrue(root.get("isActive")));
 
-            // Serbest metin arama (q parametresi) - Tokenized Flexible Search
-            if (filter.getQ() != null && !filter.getQ().isBlank()) {
+            // ID Array filtresi (Typesense delegasyonu vb. ile doldurulduysa)
+            if (filter.getProductIds() != null) {
+                if (filter.getProductIds().isEmpty()) {
+                    predicates.add(cb.disjunction()); // Sıfır sonuç varsa kesin false ver (boş liste IN yapısı patlamasın diye)
+                } else {
+                    predicates.add(root.get("id").in(filter.getProductIds()));
+                }
+            }
+            // Serbest metin arama (q parametresi) - Tokenized Flexible Search (Eğer productIds ile ezilmediyse)
+            else if (filter.getQ() != null && !filter.getQ().isBlank()) {
                 String queryStr = filter.getQ().trim().toLowerCase();
                 String[] tokens = queryStr.split("\\s+"); // Kelimelere böl
                 

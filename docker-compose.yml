@@ -1,0 +1,22 @@
+# ShopAI — Docker Compose (Geliştirme Ortamı)
+# Typesense arama motoru servisi
+
+services:
+  typesense:
+    image: typesense/typesense:27.1
+    container_name: shopai-typesense
+    restart: unless-stopped
+    ports:
+      - "8108:8108"
+    volumes:
+      - ./typesense-data:/data
+    command: >
+      --data-dir /data
+      --api-key=${TYPESENSE_API_KEY:-shopai-typesense-key-2024}
+      --enable-cors
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
