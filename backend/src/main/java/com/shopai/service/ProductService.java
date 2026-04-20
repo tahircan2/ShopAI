@@ -83,9 +83,15 @@ public class ProductService {
         }
         // =======================================================
 
+        org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(
+                "asc".equalsIgnoreCase(filter.getSortDir()) ? org.springframework.data.domain.Sort.Direction.ASC : org.springframework.data.domain.Sort.Direction.DESC,
+                filter.getSortBy() != null ? filter.getSortBy() : "createdAt"
+        );
+
         Pageable pageable = PageRequest.of(
                 filter.getPage() != null ? filter.getPage() : 0,
-                filter.getSize() != null ? Math.min(filter.getSize(), 50) : 20
+                filter.getSize() != null ? Math.min(filter.getSize(), 50) : 20,
+                sort
         );
         return productRepository
                 .findAll(ProductSpecification.withFilter(filter), pageable)

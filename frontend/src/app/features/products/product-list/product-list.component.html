@@ -87,7 +87,12 @@
         @for (r of [4,3,2,1]; track r) {
         <label class="filter-option">
           <input type="radio" name="rating" [value]="r" [(ngModel)]="filter.rating" />
-          <span>{{ '★'.repeat(r) }} ve üzeri</span>
+          <div class="stars-wrap">
+            @for (i of [1,2,3,4,5]; track i) {
+              <span class="star" [class.full]="i <= r" [class.empty]="i > r">★</span>
+            }
+          </div>
+          <span style="margin-left:4px">ve üzeri</span>
         </label>
         }
       </div>
@@ -144,7 +149,14 @@
               @if (p.brand) { <span class="product-brand">{{ p.brand }}</span> }
               <h4 class="product-name">{{ p.name }}</h4>
               <div class="product-rating">
-                <span>{{ '★'.repeat(Math.floor(p.ratingAvg)) }}</span>
+                <div class="stars-wrap">
+                  @for (i of [1,2,3,4,5]; track i) {
+                    <span class="star" 
+                      [class.full]="p.ratingAvg >= i" 
+                      [class.half]="p.ratingAvg >= i - 0.5 && p.ratingAvg < i"
+                      [class.empty]="p.ratingAvg < i - 0.5">★</span>
+                  }
+                </div>
                 <span class="text-dim text-xs">({{ p.ratingCount }})</span>
               </div>
               <div class="product-price">

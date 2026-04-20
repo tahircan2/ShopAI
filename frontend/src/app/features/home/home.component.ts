@@ -40,12 +40,6 @@ export class HomeComponent implements OnInit {
     return Math.round((1 - p.discountedPrice / p.price) * 100);
   }
 
-  stars(avg: number): string {
-    const full = Math.floor(avg);
-    const half = avg % 1 >= 0.5;
-    return '★'.repeat(full) + (half ? '½' : '') + '☆'.repeat(5 - full - (half ? 1 : 0));
-  }
-
   scrollToFeatures(): void {
     document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
   }

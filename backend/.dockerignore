@@ -1,0 +1,13 @@
+target/
+.mvn/
+.idea/
+.vscode/
+.git/
+.gitignore
+*.md
+help.md
+mvnw
+mvnw.cmd
+.env
+run_log.txt
+test_auth.js

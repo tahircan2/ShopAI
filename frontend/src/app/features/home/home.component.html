@@ -110,7 +110,14 @@
           }
           <h4 class="product-name">{{ p.name }}</h4>
           <div class="product-rating">
-            <span class="stars">{{ stars(p.ratingAvg) }}</span>
+            <div class="stars-wrap">
+              @for (i of [1,2,3,4,5]; track i) {
+                <span class="star" 
+                  [class.full]="p.ratingAvg >= i" 
+                  [class.half]="p.ratingAvg >= i - 0.5 && p.ratingAvg < i"
+                  [class.empty]="p.ratingAvg < i - 0.5">★</span>
+              }
+            </div>
             <span class="rating-count">({{ p.ratingCount }})</span>
           </div>
           <div class="product-price">

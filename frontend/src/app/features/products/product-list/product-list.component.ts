@@ -53,11 +53,20 @@ export class ProductListComponent implements OnInit {
     this.route.queryParamMap.subscribe(params => {
       const q = params.get('q');
       const categorySlug = params.get('categorySlug');
+      const sortBy = params.get('sortBy');
+      const sortDir = params.get('sortDir');
+
       this.filter = { page: 0, size: 9 };
       if (q) { this.filter.q = q; }
       if (categorySlug) { 
         this.filter.categorySlug = categorySlug;
         this.autoExpandActiveCategory();
+      }
+      
+      if (sortBy && sortDir) {
+        this.sortBy = `${sortBy},${sortDir}`;
+      } else {
+        this.sortBy = 'createdAt,desc';
       }
       this.currentPage.set(0);
       this.loadProducts();

@@ -55,9 +55,12 @@
 
       <!-- Rating -->
       <div class="rating-row">
-        <div class="stars">
+        <div class="stars-wrap">
           @for (i of [1,2,3,4,5]; track i) {
-          <span [class.filled]="i <= product()!.ratingAvg">★</span>
+          <span class="star" 
+            [class.full]="product()!.ratingAvg >= i" 
+            [class.half]="product()!.ratingAvg >= i - 0.5 && product()!.ratingAvg < i"
+            [class.empty]="product()!.ratingAvg < i - 0.5">★</span>
           }
         </div>
         <span class="rating-val">{{ product()!.ratingAvg.toFixed(1) }}</span>
@@ -181,9 +184,12 @@
       <div class="rating-summary">
         <div class="rating-big">
           <div class="rating-num">{{ product()!.ratingAvg.toFixed(1) }}</div>
-          <div class="rating-stars">
+          <div class="stars-wrap" style="font-size: 20px;">
             @for (i of [1,2,3,4,5]; track i) {
-            <span [class.filled]="i <= Math.round(product()!.ratingAvg)">★</span>
+            <span class="star" 
+              [class.full]="product()!.ratingAvg >= i" 
+              [class.half]="product()!.ratingAvg >= i - 0.5 && product()!.ratingAvg < i"
+              [class.empty]="product()!.ratingAvg < i - 0.5">★</span>
             }
           </div>
           <div class="text-muted text-sm">{{ product()!.ratingCount }} değerlendirme</div>
@@ -236,9 +242,9 @@
             <div class="reviewer-name">{{ r.userFullName || r.userName || 'Kullanıcı' }}</div>
             <div class="review-date text-dim text-xs">{{ r.createdAt | date:'dd.MM.yyyy' }}</div>
           </div>
-          <div class="review-stars">
+          <div class="stars-wrap">
             @for (i of [1,2,3,4,5]; track i) {
-            <span [class.filled]="i <= r.rating">★</span>
+            <span class="star" [class.full]="i <= r.rating" [class.empty]="i > r.rating">★</span>
             }
           </div>
           @if (r.isVerifiedPurchase) {

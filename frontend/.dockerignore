@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.angular/
+.git/
+.gitignore
+*.md
+.idea/
+.vscode/
+npm-debug.log
+proxy.conf.json

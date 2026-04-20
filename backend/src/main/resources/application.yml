@@ -2,8 +2,8 @@ spring:
   config:
     import: "optional:file:.env[.properties]"
   datasource:
-    url: jdbc:mysql://localhost:3306/shopai?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: shopai_user
+    url: jdbc:mysql://${DB_HOST:localhost}:3306/shopai?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:shopai_user}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
@@ -128,5 +128,5 @@ typesense:
   protocol: http
   host: ${TYPESENSE_HOST:localhost}
   port: ${TYPESENSE_PORT:8108}
-  api-key: ${TYPESENSE_API_KEY:shopai-typesense-key-2024}
+  api-key: ${TYPESENSE_API_KEY}
   connection-timeout-seconds: 5

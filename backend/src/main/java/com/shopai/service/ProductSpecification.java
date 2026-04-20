@@ -140,7 +140,7 @@ public class ProductSpecification {
 
             Expression<?> sortExpr = switch (sortBy) {
                 case "price" -> root.get("price");
-                case "rating" -> root.get("ratingAvg");
+                case "rating", "ratingAvg" -> root.get("ratingAvg");
                 case "ratingCount" -> root.get("ratingCount");
                 default -> root.get("createdAt");
             };

@@ -595,3 +595,28 @@ a:hover {
   outline-offset: 2px;
   border-radius: 4px;
 }
+/* Star Ratings */
+.stars-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+
+  .star {
+    font-size: 1.1em;
+    color: var(--clr-text-dim);
+    position: relative;
+    user-select: none;
+
+    &.full {
+      color: var(--clr-warning);
+    }
+
+    &.half {
+      background: linear-gradient(90deg, var(--clr-warning) 50%, var(--clr-text-dim) 50%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  }
+}
