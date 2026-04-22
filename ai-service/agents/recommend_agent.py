@@ -8,7 +8,7 @@ göre ürün önerir. Kişiselleştirme için kullanıcı geçmişi kullanılabi
 import json
 import structlog
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 
 from config import settings
 from graph.state import AgentState
@@ -36,8 +36,8 @@ JSON formatı:
 SADECE JSON döndür."""
 
 
-async def extract_recommendation_context(message: str) -> dict:
-    """Kullanıcı mesajından öneri bağlamını çıkarır."""
+async def extract_recommendation_context(messages: list[BaseMessage]) -> dict:
+    """Sohbet geçmişinden öneri bağlamını çıkarır."""
     llm = ChatOpenAI(
         model=settings.openai_model,
         temperature=0,
@@ -48,7 +48,7 @@ async def extract_recommendation_context(message: str) -> dict:
     try:
         response = await llm.ainvoke([
             SystemMessage(content=RECOMMEND_EXTRACT_PROMPT),
-            HumanMessage(content=message),
+            *messages,
         ])
         return json.loads(response.content)
     except Exception as e:
@@ -62,7 +62,7 @@ Aşağıdaki ürün listesini kullanarak kullanıcıya kısa ve samimi bir öner
 Türkçe yaz, sıcak ve yardımsever ol."""
 
 
-async def generate_recommendation_response(message: str, products: list) -> str:
+async def generate_recommendation_response(messages: list[BaseMessage], products: list) -> str:
     """LLM ile öneri yanıtı oluşturur."""
     llm = ChatOpenAI(
         model=settings.openai_model,
@@ -82,7 +82,8 @@ async def generate_recommendation_response(message: str, products: list) -> str:
     try:
         response = await llm.ainvoke([
             SystemMessage(content=RECOMMEND_RESPONSE_PROMPT),
-            HumanMessage(content=f"Kullanıcı isteği: {message}\n\n{context}"),
+            *messages,
+            HumanMessage(content=context),
         ])
         return response.content
     except Exception as e:
@@ -96,11 +97,11 @@ async def recommend_agent_node(state: AgentState) -> AgentState:
     LangGraph Recommend Agent node'u.
     Kullanıcı isteğine göre ürün önerir.
     """
-    message = state["current_message"]
+    messages = state["messages"]
     user_id = state.get("user_id")
 
-    # Öneri bağlamını çıkar
-    context = await extract_recommendation_context(message)
+    # Öneri bağlamını çıkar (Tüm geçmiş ile)
+    context = await extract_recommendation_context(messages)
     rec_type = context.get("recommendation_type", "POPULAR")
 
     logger.info("recommend_agent", rec_type=rec_type, user_id=user_id)
@@ -167,7 +168,7 @@ async def recommend_agent_node(state: AgentState) -> AgentState:
             }
 
         # LLM ile açıklayıcı yanıt oluştur
-        response_text = await generate_recommendation_response(message, content)
+        response_text = await generate_recommendation_response(messages, content)
 
         return {
             **state,

@@ -3,7 +3,6 @@ package com.shopai.service;
 import com.shopai.dto.request.AiRequests.ChatRequest;
 import com.shopai.entity.AiConversation;
 import com.shopai.entity.AiMessage;
-import com.shopai.entity.User;
 import com.shopai.repository.AiConversationRepository;
 import com.shopai.repository.AiMessageRepository;
 import com.shopai.repository.UserRepository;
@@ -54,7 +53,7 @@ public class AiService {
      * 4. Python servisi bu header'a güvenir; başka kaynaktan userId kabul etmez.
      */
     @Transactional
-    public Map<String, Object> chat(ChatRequest req, Long userId, String ip, jakarta.servlet.http.HttpServletRequest request) {
+    public Map<String, Object> chat(ChatRequest req, Long userId, String userRole, String ip, jakarta.servlet.http.HttpServletRequest request) {
         // Mesaj sanitizasyonu — Spring Boot katmanı
         String sanitizedMessage = sanitizeMessage(req.getMessage());
 
@@ -82,8 +81,9 @@ public class AiService {
                     .uri(aiServiceUrl + "/chat")
                     .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .header("X-Authenticated-User-Id", userId != null ? String.valueOf(userId) : "")
+                    .header("X-Authenticated-User-Role", userRole != null ? userRole : "")
                     .header("X-Internal-Key", internalKey) // servisler arası kimlik doğrulama
-                    .bodyValue(buildPythonPayload(sanitizedMessage, req.getSessionId(), userId))
+                    .bodyValue(buildPythonPayload(sanitizedMessage, req.getSessionId(), userId, conversation))
                     .retrieve()
                     .bodyToMono(new org.springframework.core.ParameterizedTypeReference<Map<String, Object>>() {})
                     .block();
@@ -149,7 +149,7 @@ public class AiService {
     /**
      * AI Streaming işlemi. Frontend SSE akışını buradan okur.
      */
-    public Flux<ServerSentEvent<String>> chatStream(ChatRequest req, Long userId, String ip, jakarta.servlet.http.HttpServletRequest request) {
+    public Flux<ServerSentEvent<String>> chatStream(ChatRequest req, Long userId, String userRole, String ip, jakarta.servlet.http.HttpServletRequest request) {
         String sanitizedMessage = sanitizeMessage(req.getMessage());
         AiConversation conversation = getOrCreateConversation(req.getSessionId(), userId);
 
@@ -169,8 +169,9 @@ public class AiService {
                 .uri(aiServiceUrl + "/chat/stream")
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .header("X-Authenticated-User-Id", userId != null ? String.valueOf(userId) : "")
+                .header("X-Authenticated-User-Role", userRole != null ? userRole : "")
                 .header("X-Internal-Key", internalKey)
-                .bodyValue(buildPythonPayload(sanitizedMessage, req.getSessionId(), userId))
+                .bodyValue(buildPythonPayload(sanitizedMessage, req.getSessionId(), userId, conversation))
                 .retrieve()
                 .bodyToFlux(new org.springframework.core.ParameterizedTypeReference<ServerSentEvent<String>>() {})
                 .doOnNext(sse -> {
@@ -283,12 +284,31 @@ public class AiService {
                 .replaceAll("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]", ""); // control characters
     }
 
-    private Map<String, Object> buildPythonPayload(String message, String sessionId, Long userId) {
+    private Map<String, Object> buildPythonPayload(String message, String sessionId, Long userId, AiConversation conversation) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("message", message);
         payload.put("session_id", sessionId);
-        // userId Python'a payload'dan DEĞİL — header'dan iletilir
-        // Bu satır sadece loglama/tracing için session bağlamı sağlar
+
+        // Geçmişi yükle (son 10 mesaj)
+        var history = messageRepository.findByConversationIdOrderByCreatedAtDesc(
+                conversation.getId(), 
+                org.springframework.data.domain.PageRequest.of(0, 10)
+        );
+        
+        java.util.List<Map<String, String>> historyList = new java.util.ArrayList<>();
+        // Mesajları kronolojik sıraya sok (Desc -> Asc)
+        for (int i = history.size() - 1; i >= 0; i--) {
+            var msg = history.get(i);
+            // Mevcut mesajı dahil etme (zaten 'message' alanında gidiyor)
+            if (msg.getContent().equals(message)) continue;
+            
+            historyList.add(Map.of(
+                "role", msg.getRole().name(),
+                "content", msg.getContent()
+            ));
+        }
+        
+        payload.put("conversation_history", historyList);
         return payload;
     }
 

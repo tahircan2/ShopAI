@@ -24,7 +24,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
 
@@ -86,7 +85,6 @@ public class AuthService {
     // ────────────────────────────────────────────────
     @Transactional
     public AuthResponse login(LoginRequest req, HttpServletRequest request, HttpServletResponse response) {
-        String ip = getClientIp(request);
         String email = req.getEmail().toLowerCase().trim();
 
         User user = userRepository.findByEmail(email)

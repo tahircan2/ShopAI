@@ -1,14 +1,10 @@
 package com.shopai.service;
 
-import com.shopai.dto.response.ProductResponses.ProductSummaryResponse;
 import com.shopai.entity.Product;
 import com.shopai.entity.ProductImage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.typesense.api.Client;
 import org.typesense.api.FieldTypes;
@@ -186,9 +182,10 @@ public class TypesenseProductService {
         try {
             SearchParameters searchParams = new SearchParameters()
                     .q(q)
-                    .queryBy("name,description,brand")
+                    .queryBy("name,description,brand,categoryName")
                     .filterBy("isActive:true")
                     .sortBy("_text_match:desc,ratingAvg:desc")
+                    .numTypos("2")
                     .perPage(size)
                     .page(page + 1); // Typesense 1-indexed
 
@@ -303,7 +300,11 @@ public class TypesenseProductService {
 
         // Kategori
         if (product.getCategory() != null) {
-            doc.put("categoryName", product.getCategory().getName());
+            String fullCategoryName = product.getCategory().getName();
+            if (product.getCategory().getParent() != null) {
+                fullCategoryName += " " + product.getCategory().getParent().getName();
+            }
+            doc.put("categoryName", fullCategoryName);
             doc.put("categorySlug", product.getCategory().getSlug());
             doc.put("categoryId", product.getCategory().getId());
         } else {

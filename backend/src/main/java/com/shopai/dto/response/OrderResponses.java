@@ -91,6 +91,9 @@ public class OrderResponses {
         private Long productId;
         private String productName;
         private String productSku;
+        private String description;
+        private String color;
+        private String size;
         private String primaryImageUrl;
         private Integer quantity;
         private BigDecimal unitPrice;
@@ -106,11 +109,27 @@ public class OrderResponses {
                         .orElse(i.getProduct().getImages().get(0).getImageUrl());
             }
 
+            String color = null;
+            String size = null;
+
+            if (i.getVariantId() != null && i.getProduct() != null && i.getProduct().getVariants() != null) {
+                var variant = i.getProduct().getVariants().stream()
+                        .filter(v -> v.getId().equals(i.getVariantId()))
+                        .findFirst();
+                if (variant.isPresent()) {
+                    color = variant.get().getColor();
+                    size = variant.get().getSize();
+                }
+            }
+
             return OrderItemResponse.builder()
                     .id(i.getId())
                     .productId(i.getProduct() != null ? i.getProduct().getId() : null)
                     .productName(i.getProductName())
                     .productSku(i.getProductSku())
+                    .description(i.getProduct() != null ? i.getProduct().getDescription() : null)
+                    .color(color)
+                    .size(size)
                     .primaryImageUrl(primaryImg)
                     .quantity(i.getQuantity())
                     .unitPrice(i.getUnitPrice())

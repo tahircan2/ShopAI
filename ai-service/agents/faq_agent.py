@@ -90,7 +90,6 @@ async def faq_agent_node(state: AgentState) -> AgentState:
         response = await llm.ainvoke([
             SystemMessage(content=FAQ_SYSTEM_PROMPT),
             *history,
-            HumanMessage(content=message),
         ])
 
         return {

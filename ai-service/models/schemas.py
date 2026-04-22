@@ -25,15 +25,23 @@ class AgentActionType(str, Enum):
     INFO = "INFO"
     ORDER_INFO = "ORDER_INFO"
     ERROR = "ERROR"
+    # Agentic UI Control
+    APPROVAL_REQUIRED = "APPROVAL_REQUIRED"   # Frontend'de onay kartı göster
+    STEP_PROGRESS = "STEP_PROGRESS"           # Frontend'de progress stepper göster
+    CHECKOUT_COMPLETE = "CHECKOUT_COMPLETE"   # Checkout tamamlandı bildirimi
 
 
 class IntentType(str, Enum):
     PRODUCT_FILTER = "PRODUCT_FILTER"
+    PRODUCT_DETAIL = "PRODUCT_DETAIL"
     CART_ACTION = "CART_ACTION"
     RECOMMENDATION = "RECOMMENDATION"
     ORDER_QUERY = "ORDER_QUERY"
     FAQ = "FAQ"
     GENERAL = "GENERAL"
+    CHECKOUT = "CHECKOUT"
+    NAVIGATE = "NAVIGATE"
+    USER_PROFILE = "USER_PROFILE"
 
 
 class ChatRequest(BaseModel):
@@ -50,6 +58,7 @@ class ChatRequest(BaseModel):
 
     session_id: str = Field(..., description="Frontend session UUID", min_length=1, max_length=100)
     message: str = Field(..., description="Kullanıcı mesajı", min_length=1, max_length=500)
+    conversation_history: list[dict] = Field(default_factory=list, description="Geçmiş mesajlar listesi")
 
     @field_validator("message")
     @classmethod
@@ -91,6 +100,11 @@ class ChatResponse(BaseModel):
     injection_detected: bool = Field(default=False, description="Prompt injection tespit edildi mi")
     session_id: str = Field(..., description="İstek session ID'si")
     intent: Optional[str] = Field(None, description="Tespit edilen niyet")
+    # Agentic UI Control fields
+    requires_approval: bool = Field(default=False, description="Kullanıcı onayı gerekiyor mu")
+    approval_token: Optional[str] = Field(None, description="Backend onay token'ı")
+    plan_data: Optional[str] = Field(None, description="İşlem planı JSON")
+    transaction_id: Optional[int] = Field(None, description="AgentTransaction ID")
 
 
 class HealthResponse(BaseModel):

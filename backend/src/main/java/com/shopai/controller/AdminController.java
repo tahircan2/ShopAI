@@ -1,177 +1,219 @@
 package com.shopai.controller;
 
+import com.shopai.dto.request.OrderRequests.*;
+import com.shopai.dto.response.OrderResponses.*;
+import com.shopai.dto.request.ProductRequests.*;
+import com.shopai.dto.response.ProductResponses.*;
 import com.shopai.dto.response.AuthResponses.UserInfo;
+
+import com.shopai.entity.ProductImage;
 import com.shopai.entity.User;
-import com.shopai.entity.AuditLog;
-import com.shopai.exception.ResourceNotFoundException;
-import com.shopai.service.AuditLogService;
+import com.shopai.repository.ProductRepository;
 import com.shopai.repository.UserRepository;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import com.shopai.service.CategoryService;
+import com.shopai.service.CouponService;
+import com.shopai.service.OrderService;
+import com.shopai.service.ProductService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.prepost.PreAuthorize;
+import com.shopai.security.JwtAuthDetails;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
-@PreAuthorize("hasRole('ADMIN')")
 @RequiredArgsConstructor
-@Tag(name = "Admin", description = "Admin panel işlemleri")
 public class AdminController {
 
-    private final UserRepository userRepository;
-    private final AuditLogService auditLogService;
-    private final com.shopai.service.CategoryService categoryService;
+    private final com.shopai.service.UserService userService;
+    private final ProductRepository productRepository;
+    private final ProductService productService;
+    private final OrderService orderService;
+    private final CategoryService categoryService;
+    private final CouponService couponService;
+    private final com.shopai.repository.AuditLogRepository auditLogRepository;
+
+    @GetMapping("/stats")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getStats() {
+        return ResponseEntity.ok(productService.getAdminStats());
+    }
 
     @GetMapping("/audit-logs")
-    @Operation(summary = "Sistem loglarını getir (Admin)")
-    public ResponseEntity<Page<AuditLog>> getAuditLogs(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<com.shopai.entity.AuditLog>> getAuditLogs(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(auditLogService.getLatestLogsPaginated(page, size));
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(auditLogRepository.findAll(pageable));
     }
 
     @GetMapping("/users")
-    @Operation(summary = "Tüm kullanıcılar (Admin)")
-    public ResponseEntity<Page<UserInfo>> getAllUsers(
-            @RequestParam(required = false) String search,
-            @RequestParam(required = false) String role,
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<org.springframework.data.domain.Page<UserInfo>> getUsers(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-
-        User.Role roleEnum = null;
-        if (role != null && !role.trim().isEmpty()) {
-            try {
-                roleEnum = User.Role.valueOf(role);
-            } catch (Exception e) {
-            }
-        }
-        String searchTerm = (search != null && !search.trim().isEmpty()) ? search : null;
-
-        return ResponseEntity.ok(
-                userRepository.searchUsers(searchTerm, roleEnum,
-                        PageRequest.of(page, Math.min(size, 100),
-                                Sort.by(Sort.Direction.DESC, "createdAt")))
-                        .map(UserInfo::from));
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String role) {
+        return ResponseEntity.ok(userService.getAllUsers(page, size, search, role));
     }
 
     @DeleteMapping("/users/{id}")
-    @Operation(summary = "Kullanıcı Sil (Admin)")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", id));
-        
-        auditLogService.logEntityAction(null, "ADMIN_USER_DELETE", user, null, "User", id, request);
-        userRepository.deleteById(id);
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id, HttpServletRequest request) {
+        userService.deleteUser(id, request);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/users/{id}")
-    @Operation(summary = "Kullanıcı detayı (Admin)")
-    public ResponseEntity<UserInfo> getUserById(@PathVariable Long id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", id));
-        return ResponseEntity.ok(UserInfo.from(user));
-    }
-
-    @PutMapping("/users/{id}/activate")
-    @Operation(summary = "Kullanıcıyı aktifleştir (Admin)")
-    public ResponseEntity<UserInfo> activateUser(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", id));
-        
-        String oldState = user.getIsActive() ? "ACTIVE" : "INACTIVE";
-        user.setIsActive(true);
-        user.setLockedUntil(null);
-        user.setFailedLoginAttempts(0);
-        
-        auditLogService.logWithRequest(null, "ADMIN_USER_ACTIVATE", "User", id, oldState, "ACTIVE", request);
-        return ResponseEntity.ok(UserInfo.from(userRepository.save(user)));
-    }
-
-    @PutMapping("/users/{id}/deactivate")
-    @Operation(summary = "Kullanıcıyı devre dışı bırak (Admin)")
-    public ResponseEntity<UserInfo> deactivateUser(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", id));
-        
-        String oldState = user.getIsActive() ? "ACTIVE" : "INACTIVE";
-        user.setIsActive(false);
-        
-        auditLogService.logWithRequest(null, "ADMIN_USER_DEACTIVATE", "User", id, oldState, "INACTIVE", request);
-        return ResponseEntity.ok(UserInfo.from(userRepository.save(user)));
+    @PutMapping("/users/{id}/role")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserInfo> updateUserRole(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(userService.updateUserRole(id, body.get("role"), request));
     }
 
     @PutMapping("/users/{id}/toggle-active")
-    @Operation(summary = "Kullanıcı durumunu değiştir (Admin)")
-    public ResponseEntity<UserInfo> toggleActive(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", id));
-        
-        boolean oldVal = user.getIsActive();
-        user.setIsActive(!oldVal);
-        if (user.getIsActive()) {
-            user.setLockedUntil(null);
-            user.setFailedLoginAttempts(0);
-        }
-        
-        auditLogService.logWithRequest(null, "ADMIN_USER_TOGGLE", "User", id, 
-                String.valueOf(oldVal), String.valueOf(!oldVal), request);
-                
-        return ResponseEntity.ok(UserInfo.from(userRepository.save(user)));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserInfo> toggleUserActive(@PathVariable Long id, HttpServletRequest request) {
+        return ResponseEntity.ok(userService.toggleUserActive(id, request));
     }
 
-    @PutMapping("/users/{id}/role")
-    @Operation(summary = "Kullanıcı rolünü güncelle (Admin)")
-    public ResponseEntity<UserInfo> updateUserRole(@PathVariable Long id,
-            @RequestBody java.util.Map<String, String> body, jakarta.servlet.http.HttpServletRequest request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı", id));
-        
-        String oldRole = user.getRole().name();
-        String role = body.get("role");
-        if (role == null || role.isBlank()) {
-            return ResponseEntity.badRequest().build();
-        }
-        try {
-            User.Role newRole = User.Role.valueOf(role.toUpperCase().trim());
-            user.setRole(newRole);
-            auditLogService.logWithRequest(null, "ADMIN_ROLE_CHANGE", "User", id, oldRole, newRole.name(), request);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(UserInfo.from(userRepository.save(user)));
+    @GetMapping("/orders")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<OrderSummaryResponse>> getOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(orderService.getAllOrders(page, size));
     }
 
-    // --- Kategoriler ---
+    @PutMapping("/orders/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrderResponse> updateOrderStatus(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateOrderStatusRequest req,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(id, req, request));
+    }
+
+    @GetMapping("/products")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
+    public ResponseEntity<Page<ProductSummaryResponse>> getProducts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return ResponseEntity.ok(productRepository.findAll(pageable).map(ProductSummaryResponse::from));
+    }
+
+    @PostMapping("/products")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
+    public ResponseEntity<ProductResponse> createProduct(
+            @AuthenticationPrincipal JwtAuthDetails auth,
+            @Valid @RequestBody CreateProductRequest req,
+            HttpServletRequest request) {
+        Long sellerId = "SELLER".equals(auth.getRole()) ? auth.getUserId() : null;
+        return ResponseEntity.ok(productService.createProduct(req, sellerId, request));
+    }
+
+    @PutMapping("/products/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
+    public ResponseEntity<ProductResponse> updateProduct(
+            @AuthenticationPrincipal JwtAuthDetails auth,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProductRequest req,
+            HttpServletRequest request) {
+        boolean isAdmin = "ADMIN".equals(auth.getRole());
+        return ResponseEntity.ok(productService.updateProduct(id, req, auth.getUserId(), isAdmin, request));
+    }
+
+    @DeleteMapping("/products/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
+    public ResponseEntity<Void> deleteProduct(
+            @AuthenticationPrincipal JwtAuthDetails auth,
+            @PathVariable Long id,
+            HttpServletRequest request) {
+        boolean isAdmin = "ADMIN".equals(auth.getRole());
+        productService.deleteProduct(id, auth.getUserId(), isAdmin, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/products/{id}/images")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
+    public ResponseEntity<List<ProductImage>> uploadImages(
+            @PathVariable Long id,
+            @RequestParam("files") org.springframework.web.multipart.MultipartFile[] files,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(productService.uploadImages(id, files, request));
+    }
+
+    @DeleteMapping("/products/{id}/images/{imageId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
+    public ResponseEntity<Void> deleteImage(
+            @PathVariable Long id,
+            @PathVariable Long imageId,
+            HttpServletRequest request) {
+        productService.deleteImage(id, imageId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    // ─── Categories ─────────────────────────────────────────────────────────
+    @GetMapping("/categories")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SELLER')")
+    public ResponseEntity<List<CategoryResponse>> getCategories() {
+        return ResponseEntity.ok(categoryService.getAllWithChildren());
+    }
 
     @PostMapping("/categories")
-    @Operation(summary = "Kategori ekle (Admin)")
-    public ResponseEntity<com.shopai.dto.response.ProductResponses.CategoryResponse> createCategory(
-            @RequestBody com.shopai.dto.request.ProductRequests.CategoryRequest req,
-            jakarta.servlet.http.HttpServletRequest request) {
-        return ResponseEntity.status(org.springframework.http.HttpStatus.CREATED)
-                .body(categoryService.createCategory(req, request));
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest req,
+            HttpServletRequest request) {
+        return ResponseEntity.ok(categoryService.createCategory(req, request));
     }
 
     @PutMapping("/categories/{id}")
-    @Operation(summary = "Kategori güncelle (Admin)")
-    public ResponseEntity<com.shopai.dto.response.ProductResponses.CategoryResponse> updateCategory(
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CategoryResponse> updateCategory(
             @PathVariable Long id,
-            @RequestBody com.shopai.dto.request.ProductRequests.CategoryRequest req,
-            jakarta.servlet.http.HttpServletRequest request) {
+            @Valid @RequestBody CategoryRequest req,
+            HttpServletRequest request) {
         return ResponseEntity.ok(categoryService.updateCategory(id, req, request));
     }
 
     @DeleteMapping("/categories/{id}")
-    @Operation(summary = "Kategori sil (Admin)")
-    public ResponseEntity<Void> deleteCategory(@PathVariable Long id, jakarta.servlet.http.HttpServletRequest request) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id, HttpServletRequest request) {
         categoryService.deleteCategory(id, request);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok().build();
+    }
+
+    // ─── Coupons ────────────────────────────────────────────────────────────
+    @GetMapping("/coupons")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getCoupons() {
+        return ResponseEntity.ok(couponService.getAll());
+    }
+
+    @PostMapping("/coupons")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> createCoupon(@Valid @RequestBody CouponRequest req) {
+        return ResponseEntity.ok(couponService.create(req));
+    }
+
+    @DeleteMapping("/coupons/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteCoupon(@PathVariable Long id) {
+        couponService.delete(id);
+        return ResponseEntity.ok().build();
     }
 }

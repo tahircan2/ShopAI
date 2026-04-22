@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shopai.entity.AuditLog;
 import com.shopai.repository.AuditLogRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -15,18 +14,15 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import java.util.List;
 import java.util.Map;
-
 @Slf4j
 @Service
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
-    private final ObjectMapper objectMapper;
     private final ObjectMapper auditMapper;
 
     public AuditLogService(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
         this.auditLogRepository = auditLogRepository;
-        this.objectMapper = objectMapper;
         
         // Audit logları için güvenli ve döngüsüz serileştirme yapacak özel mapper
         this.auditMapper = objectMapper.copy();

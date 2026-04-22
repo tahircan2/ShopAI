@@ -23,6 +23,9 @@ class AgentState(TypedDict):
     # ASLA kullanıcı girdisinden alınmaz. None = anonim kullanıcı.
     user_id: Optional[str]
 
+    # Kullanıcı rolü — JWT'den alınır (ROLE_ADMIN, ROLE_SELLER, ROLE_USER vs.)
+    user_role: Optional[str]
+
     # Session bilgisi
     session_id: str
 
@@ -52,3 +55,38 @@ class AgentState(TypedDict):
 
     # Mevcut kullanıcı mesajı (raw — Supervisor'ın işlemek için kullandığı)
     current_message: str
+
+    # ── Agentic UI Control — Onay ve İşlem Durumu ──
+
+    # AI'ın kullanıcıdan onay isteyip istemediği
+    requires_approval: bool
+
+    # Onay bekleyen işlem planının JSON datasını tutar
+    plan_data: Optional[str]
+
+    # Backend'den alınan onay token'ı
+    approval_token: Optional[str]
+
+    # Onay durumu: None (henüz sorulmadı), PENDING, APPROVED, REJECTED, EXPIRED
+    approval_status: Optional[str]
+
+    # Çok adımlı işlem mi
+    is_multi_step: bool
+
+    # Çok adımlı işlem (AgentTransaction) ID'si
+    transaction_id: Optional[int]
+
+    # Mevcut adım numarası
+    current_step: Optional[int]
+
+    # Toplam adım sayısı
+    total_steps: Optional[int]
+
+    # Tamamlanan adımlar [{step, status, data}]
+    completed_steps: list[dict]
+
+    # Geri alma listesi
+    rollback_actions: list[dict]
+
+    # Ön doğrulama sonucu
+    pre_validation_result: Optional[dict]

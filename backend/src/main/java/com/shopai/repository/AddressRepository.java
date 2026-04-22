@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface AddressRepository extends JpaRepository<Address, Long> {
     List<Address> findByUserId(Long userId);
     Optional<Address> findByIdAndUserId(Long id, Long userId);
+    Optional<Address> findFirstByUserIdAndIsDefaultTrue(Long userId);
 
     @Modifying
     @Query("UPDATE Address a SET a.isDefault = false WHERE a.user.id = :userId")

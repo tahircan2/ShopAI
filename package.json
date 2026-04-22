@@ -1,0 +1,15 @@
+{
+  "name": "shopai-migration-tool",
+  "version": "1.0.0",
+  "description": "Standalone migration tool for ShopAI products and Cloudinary",
+  "main": "migrate_to_cloudinary.js",
+  "type": "module",
+  "dependencies": {
+    "cloudinary": "^2.5.1",
+    "dotenv": "^16.4.7",
+    "mysql2": "^3.12.0"
+  },
+  "scripts": {
+    "migrate": "node migrate_to_cloudinary.js"
+  }
+}

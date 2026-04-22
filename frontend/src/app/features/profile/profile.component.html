@@ -194,4 +194,78 @@
     </form>
   </div>
   }
+
+  <!-- AI History Tab -->
+  @if (activeTab() === 'ai-history') {
+  <div class="tab-panel fade-in">
+    <h3>AI İşlemlerim</h3>
+    @if (loadingAiTransactions()) {
+    @for (i of [1,2,3]; track i) {
+    <div class="skeleton" style="height:80px;border-radius:var(--radius-md);margin-bottom:10px"></div>
+    }
+    } @else if (aiTransactions().length === 0) {
+    <div class="empty-state">
+      <p class="text-muted">Henüz hiç AI işlemi başlatmadınız.</p>
+    </div>
+    } @else {
+    @for (tx of aiTransactions(); track tx.id) {
+    <div class="order-row">
+      <div>
+        <div class="order-num">{{ tx.transactionType }}</div>
+        <div class="text-dim text-xs">{{ tx.createdAt | date:'dd.MM.yyyy HH:mm' }}</div>
+      </div>
+      <div class="text-sm text-muted">{{ tx.completedSteps }}/{{ tx.totalSteps }} Adım tamamlandı</div>
+      <span class="badge badge-primary">{{ tx.status }}</span>
+    </div>
+    }
+    }
+  </div>
+  }
+
+  <!-- AI Preferences Tab -->
+  @if (activeTab() === 'ai-preferences') {
+  <div class="tab-panel fade-in">
+    <h3>AI Tercihleri</h3>
+    <p class="text-muted" style="margin-bottom: 20px;">AI asistanının sizin adınıza sipariş verme ve karar alma yetkilerini buradan yönetin.</p>
+    
+    @if (loadingAiPreferences()) {
+      <div class="skeleton" style="height:120px;border-radius:var(--radius-md);margin-bottom:10px"></div>
+    } @else {
+      <form [formGroup]="aiPrefForm" (ngSubmit)="updateAiPreferences()">
+        
+        <div class="form-group" style="margin-bottom:16px">
+          <label class="form-label form-label--checkbox">
+            <input formControlName="autoApproveEnabled" type="checkbox" />
+            Otomatik İşlem Onayına İzin Ver
+          </label>
+          <span class="form-hint" style="margin-left: 28px;">Belirli limitler dâhilindeki işlemlerde onay penceresi sorulmaz.</span>
+        </div>
+
+        <div class="form-group" style="margin-top:14px; max-width: 250px;">
+          <label class="form-label">Otomatik Onay Maksimum Tutar (TL)</label>
+          <input formControlName="autoApproveMaxAmount" type="number" class="form-input" placeholder="Örn: 500" />
+        </div>
+
+        <div class="form-group" style="margin-top:20px">
+          <label class="form-label form-label--checkbox">
+            <input formControlName="useDefaultAddress" type="checkbox" />
+            Varsayılan Adresimi Otomatik Kullan
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-top:10px">
+          <label class="form-label form-label--checkbox">
+            <input formControlName="useDefaultPayment" type="checkbox" />
+            Kayıtlı Ödeme Yöntemimi Otomatik Kullan
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="margin-top:20px" [disabled]="savingAiPreferences()">
+          @if (savingAiPreferences()) { <span class="spinner"></span> }
+          Tercihleri Kaydet
+        </button>
+      </form>
+    }
+  </div>
+  }
 </div>

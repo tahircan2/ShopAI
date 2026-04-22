@@ -28,6 +28,7 @@ def _auth_headers(user_id: str) -> dict:
 @tool
 async def get_user_orders(
     user_id: str,
+    user_role: str = "",
     page: int = 0,
     size: int = 5,
 ) -> dict:
@@ -45,7 +46,11 @@ async def get_user_orders(
     if not user_id:
         return {"error": "Sipariş geçmişi için giriş yapmanız gerekiyor."}
 
-    url = f"{settings.spring_boot_base_url}/users/me/orders"
+    if user_role == "ROLE_ADMIN":
+        url = f"{settings.spring_boot_base_url}/orders/admin"
+    else:
+        url = f"{settings.spring_boot_base_url}/users/me/orders"
+
     params = {"page": page, "size": size}
 
     try:
@@ -71,6 +76,7 @@ async def get_user_orders(
 async def get_order_detail(
     user_id: str,
     order_number: str,
+    user_role: str = "",
 ) -> dict:
     """
     Belirli bir siparişin detayını getir.
@@ -87,7 +93,12 @@ async def get_order_detail(
     if not user_id:
         return {"error": "Sipariş detayı için giriş yapmanız gerekiyor."}
 
-    url = f"{settings.spring_boot_base_url}/orders/{order_number}"
+    if user_role == "ROLE_ADMIN":
+        # Adminler tüm siparişlerin detayına erişebilir. OrderController/OrderService backend tarafında desteklemiyorsa 
+        # şimdilik /orders/{orderNumber} çağrılır, backend güncellenecektir.
+        url = f"{settings.spring_boot_base_url}/orders/{order_number}?isAdmin=true"
+    else:
+        url = f"{settings.spring_boot_base_url}/orders/{order_number}"
 
     try:
         response = await _http_client.get(url, headers=_auth_headers(user_id))
@@ -106,7 +117,7 @@ async def get_order_detail(
 
 
 @tool
-async def get_latest_order(user_id: str) -> dict:
+async def get_latest_order(user_id: str, user_role: str = "") -> dict:
     """
     Kullanıcının en son siparişini getir (sipariş durumu sorgulaması için kullanışlı).
 
@@ -119,7 +130,7 @@ async def get_latest_order(user_id: str) -> dict:
     if not user_id:
         return {"error": "Sipariş bilgisi için giriş yapmanız gerekiyor."}
 
-    result = await get_user_orders.ainvoke({"user_id": user_id, "page": 0, "size": 1})
+    result = await get_user_orders.ainvoke({"user_id": user_id, "user_role": user_role, "page": 0, "size": 1})
 
     if "error" in result:
         return result

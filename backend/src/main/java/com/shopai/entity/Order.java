@@ -1,5 +1,6 @@
 package com.shopai.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -32,6 +33,7 @@ public class Order {
     @Column(name = "order_number", unique = true, nullable = false, length = 20)
     private String orderNumber;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -77,6 +79,27 @@ public class Order {
 
     @Column(name = "payment_reference", length = 255)
     private String paymentReference;
+
+    // ── Agentic UI Control — AI kaynaklı sipariş takibi ──
+
+    /**
+     * Siparişin AI tarafından oluşturulup oluşturulmadığını gösteren bayrak.
+     */
+    @Column(name = "is_ai_created", nullable = false)
+    @Builder.Default
+    private Boolean isAiCreated = false;
+
+    /**
+     * Siparişi oluşturan AI agent tipi (ör. checkout_orchestration, cart_agent).
+     */
+    @Column(name = "ai_agent_type", length = 50)
+    private String aiAgentType;
+
+    /**
+     * İlgili agent işlem ID'si — AgentTransaction tablosundaki kayıt.
+     */
+    @Column(name = "agent_transaction_id")
+    private Long agentTransactionId;
 
     @Column(name = "shipped_at")
     private LocalDateTime shippedAt;

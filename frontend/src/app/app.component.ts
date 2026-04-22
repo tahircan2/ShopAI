@@ -7,6 +7,7 @@ import { ToastComponent } from './shared/components/toast/toast.component';
 import { SessionExpiredComponent } from './shared/components/session-expired/session-expired.component';
 import { ChatbotComponent } from './shared/components/chatbot/chatbot.component';
 import { LoadingBarComponent } from './shared/components/loading-spinner/loading-bar.component';
+import { AgentNotificationBannerComponent } from './shared/components/agent-notification-banner/agent-notification-banner.component';
 
 @Component({
   selector: 'app-root',
@@ -18,7 +19,8 @@ import { LoadingBarComponent } from './shared/components/loading-spinner/loading
     ToastComponent,
     SessionExpiredComponent,
     ChatbotComponent,
-    LoadingBarComponent
+    LoadingBarComponent,
+    AgentNotificationBannerComponent
   ],
   template: `
     <app-loading-bar />
@@ -32,6 +34,7 @@ import { LoadingBarComponent } from './shared/components/loading-spinner/loading
     @if (authService.sessionExpired()) {
       <app-session-expired />
     }
+    <app-agent-notification-banner />
   `,
   styles: [`:host { display: flex; flex-direction: column; min-height: 100vh; } .page-content { flex: 1; padding-top: 64px; }`]
 })

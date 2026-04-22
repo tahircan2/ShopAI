@@ -81,6 +81,7 @@ async def filter_products(
     sort_dir: Optional[str] = "asc",
     page: int = 0,
     size: int = 10,
+    q: Optional[str] = None,
     user_id: Optional[str] = None,
 ) -> dict:
     """
@@ -98,6 +99,7 @@ async def filter_products(
         sort_dir: Sıralama yönü (asc, desc)
         page: Sayfa numarası
         size: Sayfa başı kayıt sayısı
+        q: Serbest metin arama terimi
         user_id: JWT'den extract edilen kullanıcı ID'si
 
     Returns:
@@ -106,6 +108,8 @@ async def filter_products(
     url = f"{settings.spring_boot_base_url}/products"
     params: dict = {"page": page, "size": size}
 
+    if q:
+        params["q"] = q
     if category:
         # Gelen kategori ismini slug formatına dönüştür
         slug = category.lower().replace("ş", "s").replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ö", "o").replace("ç", "c").replace(" ", "-")

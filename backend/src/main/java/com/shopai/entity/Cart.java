@@ -1,5 +1,6 @@
 package com.shopai.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -21,6 +22,7 @@ public class Cart {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
@@ -28,6 +30,20 @@ public class Cart {
     @OneToMany(mappedBy = "cart", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<CartItem> items = new ArrayList<>();
+
+    // ── Agentic UI Control — AI müdahale takibi ──
+
+    /**
+     * Son AI müdahalesi zamanı — hangi agent en son bu sepete müdahale etti.
+     */
+    @Column(name = "last_ai_interaction_at")
+    private LocalDateTime lastAiInteractionAt;
+
+    /**
+     * Son müdahale eden agent adı (ör. cart_agent, checkout_agent).
+     */
+    @Column(name = "last_ai_agent", length = 50)
+    private String lastAiAgent;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

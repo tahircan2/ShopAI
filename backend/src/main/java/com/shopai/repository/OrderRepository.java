@@ -21,6 +21,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     @Query("SELECT o FROM Order o LEFT JOIN FETCH o.items WHERE o.orderNumber = :orderNumber AND o.user.id = :userId")
     Optional<Order> findByOrderNumberAndUserIdWithItems(String orderNumber, Long userId);
 
+    @Query("SELECT o FROM Order o LEFT JOIN FETCH o.items WHERE o.orderNumber = :orderNumber")
+    Optional<Order> findByOrderNumberWithItems(String orderNumber);
+
     // ─── Stats queries ───────────────────────────────────────────────────────
 
     @Query("SELECT COALESCE(SUM(o.totalAmount), 0) FROM Order o WHERE o.status <> 'CANCELLED'")

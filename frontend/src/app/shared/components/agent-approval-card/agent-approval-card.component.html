@@ -1,0 +1,94 @@
+<div class="approval-card" *ngIf="!loading">
+  <!-- Error Message -->
+  <div *ngIf="error" class="error-msg">
+    <i class="fas fa-exclamation-triangle"></i> 
+    <span>{{ error }}</span>
+  </div>
+
+  <div *ngIf="approvalData && !error" class="content">
+    <!-- Header -->
+    <div class="header">
+      <div class="title-group">
+        <i class="fas fa-shield-check icon-security"></i>
+        <h3>AI İşlem Onayı</h3>
+      </div>
+      <span class="status-badge" [ngClass]="approvalData.status.toLowerCase()">
+        {{ approvalData.status === 'PENDING' ? 'Bekliyor' : 
+           approvalData.status === 'APPROVED' ? 'Onaylandı' : 
+           approvalData.status === 'REJECTED' ? 'Reddedildi' : 'Süresi Doldu' }}
+      </span>
+    </div>
+
+    <!-- Timer / Progress Section -->
+    <div *ngIf="approvalData.status === 'PENDING'" class="timer-section">
+      <div class="timer-bar-container">
+        <div class="timer-bar" 
+             [style.width.%]="(remainingSeconds / 60) * 100"
+             [class.warning]="remainingSeconds < 15">
+        </div>
+      </div>
+      <div class="timer-text">
+        <span>İşlem Zaman Aşımı</span>
+        <strong>{{ remainingSeconds }}s</strong>
+      </div>
+    </div>
+
+    <!-- Plan Details -->
+    <div class="plan-details">
+      <p>Yapay Zeka Planı:</p>
+      
+      <ul class="task-list" *ngIf="parsedPlan?.steps">
+        <li *ngFor="let step of parsedPlan.steps">
+          <i class="fas fa-arrow-right-long"></i>
+          <div>
+            <b>{{ step.action }}</b>
+            <div style="font-size: 0.85em; opacity: 0.8">{{ step.description }}</div>
+          </div>
+        </li>
+      </ul>
+      
+      <div class="info-grid">
+        <div class="info-item" *ngIf="parsedPlan?.itemCount">
+          <label>Ürün Adedi</label>
+          <span>{{ parsedPlan.itemCount }} Adet</span>
+        </div>
+        <div class="info-item" *ngIf="parsedPlan?.paymentMethod">
+          <label>Ödeme Yöntemi</label>
+          <span>{{ parsedPlan.paymentMethod === 'KAPIDA_ODEME' ? 'Kapıda Ödeme' : 'Kredi Kartı' }}</span>
+        </div>
+        <div class="info-item total" *ngIf="parsedPlan?.totalAmount">
+          <label>Toplam Tutar</label>
+          <span>{{ parsedPlan.totalAmount | currency:'TRY':'symbol':'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions" *ngIf="approvalData.status === 'PENDING'">
+      <button class="btn-reject" (click)="reject()" [disabled]="actionInProgress">
+        <i class="fas fa-xmark"></i> Reddet
+      </button>
+      <button class="btn-approve" (click)="approve()" [disabled]="actionInProgress || remainingSeconds === 0">
+        <i class="fas fa-check"></i> Onayla
+      </button>
+    </div>
+
+    <!-- Status Messages for Completed Actions -->
+    <div style="margin-top: 15px; text-align: center; font-size: 0.9rem;" *ngIf="approvalData.status !== 'PENDING'">
+      <span *ngIf="approvalData.status === 'APPROVED'" style="color: #166534">
+        <i class="fas fa-circle-check"></i> İşlem başarıyla onaylandı ve başlatıldı.
+      </span>
+      <span *ngIf="approvalData.status === 'REJECTED'" style="color: #991b1b">
+        <i class="fas fa-circle-xmark"></i> İşlem reddedildi.
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-state" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Yükleniyor...</span>
+  </div>
+  <span class="pulse">Plan verisi yükleniyor...</span>
+</div>

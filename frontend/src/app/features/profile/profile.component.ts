@@ -7,8 +7,9 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AddressResponse, User } from '../../core/models/user.model';
 import { Order, OrderSummary } from '../../core/models/product.model';
+import { AgentBridgeService } from '../../services/agent-bridge.service';
 
-type Tab = 'profile' | 'orders' | 'addresses' | 'security' | 'reviews';
+type Tab = 'profile' | 'orders' | 'addresses' | 'security' | 'reviews' | 'ai-history' | 'ai-preferences';
 
 @Component({
   selector: 'app-profile',
@@ -23,6 +24,7 @@ export class ProfileComponent implements OnInit {
   private readonly userService = inject(UserService);
   private readonly orderService = inject(OrderService);
   private readonly toast = inject(ToastService);
+  private readonly agentBridge = inject(AgentBridgeService);
 
   readonly activeTab = signal<Tab>('profile');
   readonly orders = signal<OrderSummary[]>([]);
@@ -37,11 +39,19 @@ export class ProfileComponent implements OnInit {
   toggleAddressForm(): void { this.showAddressForm.update(v => !v); }
   readonly pwError = signal('');
 
+  readonly aiTransactions = signal<any[]>([]);
+  readonly aiPreferences = signal<any | null>(null);
+  readonly loadingAiTransactions = signal(false);
+  readonly loadingAiPreferences = signal(false);
+  readonly savingAiPreferences = signal(false);
+
   readonly tabList: { key: Tab; label: string; icon: string }[] = [
     { key: 'profile', label: 'Profil', icon: '👤' },
     { key: 'orders', label: 'Siparişler', icon: '📦' },
     { key: 'addresses', label: 'Adresler', icon: '📍' },
     { key: 'reviews', label: 'Yorumlarım', icon: '⭐' },
+    { key: 'ai-history', label: 'AI İşlemleri', icon: '🤖' },
+    { key: 'ai-preferences', label: 'AI Tercihleri', icon: '⚙️' },
     { key: 'security', label: 'Güvenlik', icon: '🔒' }
   ];
 
@@ -66,10 +76,19 @@ export class ProfileComponent implements OnInit {
     newPassword: ['', [Validators.required, Validators.minLength(8)]]
   });
 
+  readonly aiPrefForm = this.fb.group({
+    autoApproveEnabled: [false],
+    autoApproveMaxAmount: [null as number | null],
+    useDefaultAddress: [true],
+    useDefaultPayment: [true]
+  });
+
   ngOnInit(): void {
     this.loadOrders();
     this.loadAddresses();
     this.loadReviews();
+    this.loadAiTransactions();
+    this.loadAiPreferences();
   }
 
   loadOrders(): void {
@@ -94,6 +113,26 @@ export class ProfileComponent implements OnInit {
     });
   }
 
+  loadAiTransactions(): void {
+    this.loadingAiTransactions.set(true);
+    this.agentBridge.getTransactions(0, 20).subscribe({
+      next: (res) => { this.aiTransactions.set(res.content); this.loadingAiTransactions.set(false); },
+      error: () => this.loadingAiTransactions.set(false)
+    });
+  }
+
+  loadAiPreferences(): void {
+    this.loadingAiPreferences.set(true);
+    this.agentBridge.getPreferences().subscribe({
+      next: (res) => { 
+        this.aiPreferences.set(res); 
+        this.aiPrefForm.patchValue(res);
+        this.loadingAiPreferences.set(false); 
+      },
+      error: () => this.loadingAiPreferences.set(false)
+    });
+  }
+
   updateProfile(): void {
     this.savingProfile.set(true);
     this.userService.updateProfile(this.profileForm.value as Partial<User>).subscribe({
@@ -103,6 +142,26 @@ export class ProfileComponent implements OnInit {
         this.toast.success('Profil güncellendi.');
       },
       error: () => { this.savingProfile.set(false); this.toast.error('Hata oluştu.'); }
+    });
+  }
+
+  updateAiPreferences(): void {
+    this.savingAiPreferences.set(true);
+    const formVal = this.aiPrefForm.value;
+    const payload = {
+      autoApproveEnabled: formVal.autoApproveEnabled ?? false,
+      autoApproveMaxAmount: formVal.autoApproveMaxAmount ?? null,
+      useDefaultAddress: formVal.useDefaultAddress ?? false,
+      useDefaultPayment: formVal.useDefaultPayment ?? false
+    };
+
+    this.agentBridge.updatePreferences(payload as any).subscribe({
+      next: (res) => {
+        this.aiPreferences.set(res);
+        this.savingAiPreferences.set(false);
+        this.toast.success('AI Tercihleri güncellendi.');
+      },
+      error: () => { this.savingAiPreferences.set(false); this.toast.error('AI tercihleri güncellenirken bir hata oluştu!'); }
     });
   }
 

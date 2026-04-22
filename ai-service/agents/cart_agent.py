@@ -9,7 +9,7 @@ user_id ASLA kullanıcı mesajından alınmaz.
 import json
 import structlog
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage, BaseMessage
 
 from config import settings
 from graph.state import AgentState
@@ -35,11 +35,14 @@ JSON formatı:
   "find_cheapest": true/false (ADD için "en ucuz" denmişse true)
 }
 
+ÖNEMLİ: Eğer sohbet geçmişinde daha önce gösterilen bir ürünün adı geçiyorsa (ör. kullanıcı önce
+ürün araması yaptı, sonra "onu sepetime ekle" dedi), geçmişteki ürün adını product_query'ye yaz.
+
 SADECE JSON döndür."""
 
 
-async def parse_cart_intent(message: str) -> dict:
-    """Kullanıcı mesajından sepet aksiyonunu çıkarır."""
+async def parse_cart_intent(messages: list[BaseMessage]) -> dict:
+    """Sohbet geçmişinden sepet aksiyonunu çıkarır."""
     llm = ChatOpenAI(
         model=settings.openai_model,
         temperature=0,
@@ -50,7 +53,7 @@ async def parse_cart_intent(message: str) -> dict:
     try:
         response = await llm.ainvoke([
             SystemMessage(content=CART_INTENT_SYSTEM_PROMPT),
-            HumanMessage(content=message),
+            *messages,
         ])
         return json.loads(response.content)
     except Exception as e:
@@ -93,15 +96,14 @@ async def find_cheapest_product(query: str, user_id: str | None) -> dict | None:
 async def cart_agent_node(state: AgentState) -> AgentState:
     """
     LangGraph Cart Agent node'u.
-
-    KRİTİK GÜVENLİK: user_id state'ten alınır (Spring Boot JWT extract etti).
-    Kullanıcı mesajından asla alınmaz.
     """
-    message = state["current_message"]
-    user_id = state.get("user_id")  # JWT'den — kullanıcı girdisinden değil
+    messages = state["messages"]
+    user_id = state.get("user_id")
 
-    # Giriş yapmamış kullanıcı kontrolü
-    if not user_id:
+    # Giriş yapmamış kullanıcı kontrolü — hem None hem boş string kontrol et
+    if not user_id or str(user_id).strip() == "":
+        logger.warning("cart_agent_no_user_id", user_id_raw=user_id,
+                       session_id=state.get("session_id"))
         return {
             **state,
             "final_response": "Sepet işlemleri için giriş yapmanız gerekiyor. "
@@ -110,17 +112,20 @@ async def cart_agent_node(state: AgentState) -> AgentState:
             "action_type": "INFO",
         }
 
-    # Aksiyonu tespit et
-    intent_data = await parse_cart_intent(message)
+    logger.info("cart_agent_start", user_id=user_id, session_id=state.get("session_id"))
+
+    # Aksiyonu tespit et (Tüm geçmiş ile)
+    intent_data = await parse_cart_intent(messages)
     action = intent_data.get("action", "GET").upper()
 
-    logger.info("cart_action", action=action, user_id=user_id)
+    logger.info("cart_action", action=action, user_id=user_id, intent_data=intent_data)
 
     # ---- GET ----
     if action == "GET":
         cart = await get_cart.ainvoke({"user_id": user_id})
 
         if "error" in cart:
+            logger.error("cart_get_error", error=cart["error"], user_id=user_id)
             return {
                 **state,
                 "final_response": cart["error"],
@@ -171,9 +176,10 @@ async def cart_agent_node(state: AgentState) -> AgentState:
                 "query": product_query,
                 "user_id": user_id,
                 "page": 0,
-                "size": 1,
+                "size": 5,
             })
             products = result.get("content", [])
+            # En iyi eşleşmeyi bul (ilk sonuç)
             product = products[0] if products else None
 
         if not product:
@@ -193,6 +199,8 @@ async def cart_agent_node(state: AgentState) -> AgentState:
         })
 
         if "error" in cart:
+            logger.error("cart_add_error", error=cart["error"], user_id=user_id,
+                         product_id=product.get("id"))
             return {
                 **state,
                 "final_response": cart["error"],

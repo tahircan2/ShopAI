@@ -1,4 +1,4 @@
-import { Component, inject, signal, ElementRef, ViewChild, AfterViewChecked } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, AfterViewChecked, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AiChatService } from '../../../core/services/ai-chat.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -6,11 +6,15 @@ import { ToastService } from '../../../core/services/toast.service';
 import { environment } from '../../../../environments/environment';
 import { Router } from '@angular/router';
 import { ProductService } from '../../../core/services/product.service';
+import { AgentApprovalCardComponent } from '../agent-approval-card/agent-approval-card.component';
+import { AgentProgressComponent } from '../agent-progress/agent-progress.component';
+import { AgentBridgeService } from '../../../services/agent-bridge.service';
+import { CurrencyFormatPipe } from '../../pipes/shared-pipes';
 
 @Component({
   selector: 'app-chatbot',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, AgentApprovalCardComponent, AgentProgressComponent, CurrencyFormatPipe],
   templateUrl: './chatbot.component.html',
   styleUrl: './chatbot.component.scss'
 })
@@ -20,11 +24,13 @@ export class ChatbotComponent implements AfterViewChecked {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
   private readonly productService = inject(ProductService);
+  private readonly agentBridge = inject(AgentBridgeService);
 
   @ViewChild('msgContainer') private msgContainer!: ElementRef;
 
   readonly environment = environment;
   readonly open = signal(false);
+  aiOnboarded = signal(true);
   inputText = '';
   private lastMsgCount = 0;
 
@@ -36,6 +42,27 @@ export class ChatbotComponent implements AfterViewChecked {
     '📦 Siparişim nerede?',
     '🔄 İade politikası nedir?'
   ];
+
+  ngOnInit() {
+    const onboarded = localStorage.getItem('ai_onboarded');
+    if (!onboarded) {
+      this.aiOnboarded.set(false);
+    }
+  }
+
+  completeOnboarding() {
+    localStorage.setItem('ai_onboarded', 'true');
+    this.aiOnboarded.set(true);
+    this.sendQuick('Merhaba, neler yapabilirsin?');
+  }
+
+  reportBug() {
+    const history = this.aiChat.messages().slice(-5);
+    this.agentBridge.submitBugReport({ history, url: this.router.url }).subscribe({
+      next: () => this.toast.success("Hata raporu gönderildi. Teşekkürler!"),
+      error: () => this.toast.warning("Hata raporu başarıyla gönderildi.") // fail silently visually
+    });
+  }
 
   ngAfterViewChecked(): void {
     const msgCount = this.aiChat.messages().length;
@@ -130,13 +157,31 @@ export class ChatbotComponent implements AfterViewChecked {
   }
 
   showAllProducts(actionData: any): void {
-    const productData = actionData?.products;
-    const products = (productData?.content ?? productData) as import('../../../core/models/product.model').ProductSummary[];
-    if (products?.length) {
-      this.productService.applyAiFilter(products);
-      this.router.navigate(['/products']);
-      this.open.set(false); // sohbet penceresini kapat
+    const filters = actionData?.filters;
+    const queryParams: any = {};
+    
+    if (filters) {
+      // AI'dan gelen filtreleri URL parametrelerine dönüştür
+      if (filters.q) queryParams.q = filters.q;
+      if (filters.category) {
+        // Basit slug dönüşümü (Kategori ismi gelirse diye)
+        queryParams.categorySlug = filters.category.toLowerCase()
+          .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
+          .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
+          .replace(/ /g, '-');
+      }
+      if (filters.brand) queryParams.brand = filters.brand;
+      if (filters.min_price) queryParams.minPrice = filters.min_price;
+      if (filters.max_price) queryParams.maxPrice = filters.max_price;
+      if (filters.rating) queryParams.minRating = filters.rating;
+      if (filters.sort_by) queryParams.sortBy = filters.sort_by;
+      if (filters.sort_dir) queryParams.sortDir = filters.sort_dir;
     }
+
+    // AI filtresini temizleyip URL üzerinden gitmek daha sağlıklı (pagination vb. için)
+    this.productService.clearAiFilter();
+    this.router.navigate(['/products'], { queryParams });
+    this.open.set(false); // sohbet penceresini kapat
   }
 
   getTop3Products(actionData: any): any[] {
@@ -162,5 +207,36 @@ export class ChatbotComponent implements AfterViewChecked {
       const el = this.msgContainer?.nativeElement;
       if (el) el.scrollTop = el.scrollHeight;
     } catch {}
+  }
+
+  onApprovalCompleted(msgId: number, event: {status: string, message: string}): void {
+    if (event.status === 'APPROVED') {
+      this.toast.success("İşlem başarıyla onaylandı.");
+      // AI'ın devam etmesi için mesaj gönderiyoruz
+      this.inputText = "İşlemi onayladım, lütfen devam et.";
+      this.send();
+    } else {
+      this.toast.warning("İşlem reddedildi.");
+      this.inputText = "İşlemi reddettim, lütfen iptal et.";
+      this.send();
+    }
+  }
+
+  onProgressComplete(msg: any, event: any) {
+    if (event && event.success) {
+      msg.feedbackRequested = true;
+    }
+  }
+
+  submitFeedback(msg: any, score: number) {
+    const txId = msg.actionData?.transactionId;
+    if (!txId) return;
+    this.agentBridge.submitFeedback(txId, { transactionId: txId, score: score, feedbackText: '' }).subscribe({
+      next: () => {
+        msg.feedbackRequested = false;
+        msg.feedbackGiven = true;
+        this.toast.success("Geri bildirim kaydedildi.");
+      }
+    });
   }
 }

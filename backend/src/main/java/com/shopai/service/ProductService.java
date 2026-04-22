@@ -2,15 +2,8 @@ package com.shopai.service;
 
 import com.shopai.dto.request.ProductRequests.*;
 import com.shopai.dto.response.ProductResponses.*;
-import com.shopai.entity.Category;
-import com.shopai.entity.Order;
-import com.shopai.entity.Product;
-import com.shopai.entity.Review;
-import com.shopai.entity.User;
-import com.shopai.exception.BadRequestException;
-import com.shopai.exception.ConflictException;
-import com.shopai.exception.ForbiddenException;
-import com.shopai.exception.ResourceNotFoundException;
+import com.shopai.entity.*;
+import com.shopai.exception.*;
 import com.shopai.repository.*;
 import com.shopai.service.TypesenseProductService.TypesenseSearchResult;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +35,9 @@ public class ProductService {
     private final ReviewRepository reviewRepository;
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final ProductImageRepository productImageRepository;
     private final AuditLogService auditLogService;
+    private final CloudinaryService cloudinaryService;
 
     // Opsiyonel — typesense.enabled=false ise null olur, uygulama çalışmaya devam eder
     @Autowired(required = false)
@@ -75,8 +70,12 @@ public class ProductService {
             try {
                 // Typo-tolerant aramayı çalıştırıp en iyi 200 eşleşen ID'yi alıyoruz
                 var tsResult = typesenseProductService.search(filter.getQ().trim(), 0, 200);
-                filter.setProductIds(tsResult.productIds() == null ? java.util.List.of() : tsResult.productIds());
-                filter.setQ(null); // q'yu nullluyoruz ki ProductSpecification klasik %LIKE% araması YAPMASIN
+                if (tsResult.productIds() != null && !tsResult.productIds().isEmpty()) {
+                    filter.setProductIds(tsResult.productIds());
+                    filter.setQ(null); // Typesense sonuç bulduysa q'yu nullluyoruz ki MySQL spec IDs üzerinden gitsin
+                } else {
+                    log.info("Typesense filter araması sonuç dönmedi, MySQL fallback yapılıyor: q='{}'", filter.getQ());
+                }
             } catch (Exception e) {
                 log.warn("Typesense filter araması başarısız, MySQL fallback q-like yapılıyor: {}", e.getMessage());
             }
@@ -131,8 +130,8 @@ public class ProductService {
                             .toList();
                     return new PageImpl<>(ordered, pageable, tsResult.totalFound());
                 }
-                // Typesense sonuç dönmediyse boş sayfa dön
-                return new PageImpl<>(List.of(), pageable, 0);
+                // Typesense sonuç dönmediyse MySQL fallback (Önemli: Boş dönmek yerine fallback yapıyoruz)
+                log.info("Typesense sonuç dönmedi, MySQL fallback kullanılıyor: q='{}'", q);
             } catch (Exception e) {
                 log.warn("Typesense araması başarısız, MySQL fallback kullanılıyor: {}", e.getMessage());
             }
@@ -322,6 +321,42 @@ public class ProductService {
 
         // Typesense'den sil
         removeFromTypesense(id);
+    }
+
+    // ─── Ürün Görselleri ────────────────────────────────────────────────────
+    @Transactional
+    public List<ProductImage> uploadImages(Long productId, org.springframework.web.multipart.MultipartFile[] files, jakarta.servlet.http.HttpServletRequest request) {
+        Product product = findActiveById(productId);
+        List<ProductImage> savedImages = new java.util.ArrayList<>();
+
+        int currentCount = productImageRepository.countByProductId(productId);
+
+        for (org.springframework.web.multipart.MultipartFile file : files) {
+            String url = cloudinaryService.uploadImage(file);
+            ProductImage image = ProductImage.builder()
+                    .product(product)
+                    .imageUrl(url)
+                    .isPrimary(currentCount == 0 && savedImages.isEmpty())
+                    .sortOrder(currentCount + savedImages.size())
+                    .build();
+            savedImages.add(productImageRepository.save(image));
+        }
+
+        auditLogService.logEntityAction(null, "PRODUCT_IMAGES_UPLOAD", null, savedImages, "Product", productId, request);
+        return savedImages;
+    }
+
+    @Transactional
+    public void deleteImage(Long productId, Long imageId, jakarta.servlet.http.HttpServletRequest request) {
+        ProductImage image = productImageRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Görsel bulunamadı"));
+
+        if (!image.getProduct().getId().equals(productId)) {
+            throw new BadRequestException("Bu görsel bu ürüne ait değil");
+        }
+
+        auditLogService.logEntityAction(null, "PRODUCT_IMAGE_DELETE", image, null, "Product", productId, request);
+        productImageRepository.delete(image);
     }
 
     // ─── Stats ───────────────────────────────────────────────────────────────

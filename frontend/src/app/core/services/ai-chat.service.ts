@@ -31,7 +31,40 @@ export class AiChatService {
 
   readonly messages = signal<ChatMessage[]>([]);
   readonly isTyping = signal(false);
-  readonly sessionId = signal(crypto.randomUUID());
+  readonly sessionId = signal<string>(this.getOrInitSessionId());
+
+  constructor() {
+    this.loadHistoryFromBackend();
+  }
+
+  private getOrInitSessionId(): string {
+    let id = localStorage.getItem('ai_session_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('ai_session_id', id);
+    }
+    return id;
+  }
+
+  private loadHistoryFromBackend(): void {
+    const sid = this.sessionId();
+    // Yalnızca giriş yapmış kullanıcılar için geçmiş yüklenebilir (backend kısıtlaması)
+    this.getHistory(sid).subscribe({
+      next: (res: any) => {
+        if (res && res.messages) {
+          const mapped = res.messages.map((m: any) => ({
+            ...m,
+            role: m.role.toLowerCase() as 'user' | 'assistant',
+            id: new Date(m.createdAt).getTime()
+          }));
+          this.messages.set(mapped);
+        }
+      },
+      error: (err) => {
+        console.warn('AI history could not be loaded (likely not logged in):', err);
+      }
+    });
+  }
 
   checkInjection(message: string): boolean {
     return INJECTION_PATTERNS.some(p => p.test(message));
@@ -107,12 +140,17 @@ export class AiChatService {
   }
 
   getHistory(sessionId: string): Observable<ChatMessage[]> {
-    return this.http.get<ChatMessage[]>(`${environment.apiUrl}/ai/conversations/${sessionId}`);
+    return this.http.get<ChatMessage[]>(`${environment.apiUrl}/ai/conversation/${sessionId}`);
   }
 
   clearHistory(): Observable<void> {
-    return this.http.delete<void>(`${environment.apiUrl}/ai/conversations/${this.sessionId()}`).pipe(
-      tap(() => { this.messages.set([]); this.sessionId.set(crypto.randomUUID()); })
+    return this.http.delete<void>(`${environment.apiUrl}/ai/conversation/${this.sessionId()}`).pipe(
+      tap(() => { 
+        const newId = crypto.randomUUID();
+        this.messages.set([]); 
+        this.sessionId.set(newId);
+        localStorage.setItem('ai_session_id', newId);
+      })
     );
   }
 
@@ -149,12 +187,31 @@ export class AiChatService {
         break;
       }
       case 'NAVIGATE': {
-        const url = res.actionData?.url as string;
+        const url = res.actionData?.path as string;
         if (url) this.router.navigateByUrl(url);
         break;
       }
       case 'ORDER_INFO': {
         // Sipariş bilgisi — chatbot'ta mesaj olarak gösterilir, ekstra aksiyon gerekmez
+        break;
+      }
+      case 'APPROVAL_REQUIRED': {
+        // Onay kartı — chatbot component tarafından render edilir (actionData.approvalToken)
+        // Sepeti de güncelle (kullanıcının sepeti checkout aşamasında olabilir)
+        this.cartService.getCart().subscribe();
+        break;
+      }
+      case 'STEP_PROGRESS': {
+        // Progress stepper — chatbot component tarafından render edilir (actionData.transactionId)
+        break;
+      }
+      case 'CHECKOUT_COMPLETE': {
+        // Sipariş tamamlandı — sepeti güncelle (artık boş) ve bildirim göster
+        this.cartService.getCart().subscribe();
+        break;
+      }
+      case 'AI_FEEDBACK_REQUEST': {
+        // Feedback istendi — chatbot component'i render eder
         break;
       }
     }

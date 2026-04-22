@@ -54,7 +54,6 @@ public class CloudinaryService {
     /**
      * Deletes an image from Cloudinary by extracting its public_id from the URL.
      */
-    @SuppressWarnings("unchecked")
     public void deleteImage(String imageUrl) {
         try {
             String publicId = extractPublicId(imageUrl);

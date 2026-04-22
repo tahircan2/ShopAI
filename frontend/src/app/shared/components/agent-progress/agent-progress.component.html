@@ -1,0 +1,63 @@
+<div class="progress-card" *ngIf="!loading">
+  <div *ngIf="error" class="error-msg">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+  </div>
+
+  <div *ngIf="transaction && !error" class="content">
+    <div class="header">
+      <i class="fas fa-robot icon-agent" [ngClass]="{'spin': transaction.status === 'IN_PROGRESS'}"></i>
+      <h3>AI İşlemi: {{ transaction.transactionType }}</h3>
+      <span class="status-badge" [ngClass]="transaction.status.toLowerCase()">
+        {{ transaction.status }}
+      </span>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-container">
+      <div class="progress">
+        <div class="progress-bar" 
+             role="progressbar" 
+             [style.width.%]="progressPercentage" 
+             [ngClass]="{'bg-success': transaction.status === 'COMPLETED', 'bg-danger': transaction.status === 'FAILED', 'progress-bar-animated progress-bar-striped': transaction.status === 'IN_PROGRESS'}">
+        </div>
+      </div>
+      <div class="progress-text">
+        Adım {{ transaction.completedSteps }} / {{ transaction.totalSteps }}
+      </div>
+    </div>
+
+    <!-- Steps Stepper -->
+    <div class="steps-container" *ngIf="transaction.steps && transaction.steps.length > 0">
+      <ul class="step-list">
+        <li *ngFor="let step of transaction.steps" [ngClass]="step.status.toLowerCase()" class="step-item">
+          <div class="step-icon">
+            <i class="fas fa-check" *ngIf="step.status === 'COMPLETED'"></i>
+            <i class="fas fa-spinner fa-spin" *ngIf="step.status === 'IN_PROGRESS'"></i>
+            <i class="fas fa-times" *ngIf="step.status === 'FAILED'"></i>
+            <i class="fas fa-undo" *ngIf="step.status === 'ROLLED_BACK'"></i>
+            <i class="fas fa-circle" *ngIf="step.status === 'PENDING'"></i>
+          </div>
+          <div class="step-content">
+            <div class="step-title">Adım {{ step.stepOrder }}: {{ step.stepType }}</div>
+            <div class="step-desc">{{ step.stepDescription }}</div>
+            <div class="step-error" *ngIf="step.errorMessage">{{ step.errorMessage }}</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div *ngIf="transaction.status === 'FAILED'" class="failure-box mt-3 text-danger">
+      <i class="fas fa-exclamation-triangle"></i> İşlem başarısız oldu: {{ transaction.errorMessage }}
+    </div>
+
+    <div *ngIf="transaction.status === 'COMPLETED'" class="success-box mt-3 text-success">
+      <i class="fas fa-check-circle"></i> İşlem başarıyla tamamlandı.
+      <div *ngIf="transaction.resultOrderNumber">Sipariş No: <strong>{{ transaction.resultOrderNumber }}</strong></div>
+    </div>
+  </div>
+</div>
+
+<div class="loading-state" *ngIf="loading">
+  <div class="spinner-border text-primary" role="status"></div>
+  <span>Durum yükleniyor...</span>
+</div>

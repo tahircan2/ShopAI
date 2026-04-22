@@ -47,6 +47,21 @@ public class AuditLog {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
+    // ── Agentic UI Control — AI kaynaklı işlem bayrağı ──
+
+    /**
+     * Bu işlem AI agent tarafından mı yapıldı?
+     */
+    @Column(name = "is_ai_action", nullable = false)
+    @Builder.Default
+    private Boolean isAiAction = false;
+
+    /**
+     * AI işlemi ise ilgili AgentTransaction ID'si.
+     */
+    @Column(name = "agent_transaction_id")
+    private Long agentTransactionId;
+
     @Column(name = "user_agent", length = 500)
     private String userAgent;
 

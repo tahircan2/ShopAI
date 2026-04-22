@@ -17,6 +17,10 @@ from .order_tools import (
     get_order_detail,
     get_latest_order,
 )
+from .user_tools import (
+    get_user_profile,
+    get_user_addresses,
+)
 
 __all__ = [
     "search_products",
@@ -32,4 +36,7 @@ __all__ = [
     "get_user_orders",
     "get_order_detail",
     "get_latest_order",
+    "get_user_profile",
+    "get_user_addresses",
 ]
+

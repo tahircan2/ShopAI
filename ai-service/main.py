@@ -128,6 +128,64 @@ async def health_check() -> HealthResponse:
     return HealthResponse()
 
 
+@app.post("/chat", response_model=ChatResponse, tags=["Chat"])
+async def chat(
+    request: ChatRequest,
+    x_authenticated_user_id: str | None = Header(
+        default=None,
+        alias="X-Authenticated-User-Id",
+    ),
+    x_authenticated_user_role: str | None = Header(
+        default=None,
+        alias="X-Authenticated-User-Role",
+    ),
+):
+    """
+    Bloklayan chat endpoint'i. Spring Boot'tan gelen istekleri işler.
+    """
+    session_id = request.session_id
+    message = request.message
+    user_id = x_authenticated_user_id
+    user_role = x_authenticated_user_role
+
+    # 1. Rate Limit
+    allowed, retry_after = await rate_limiter.is_allowed(session_id)
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail={"message": "Çok fazla mesaj gönderdiniz", "retry_after": retry_after},
+        )
+
+    # 2. Injection Check
+    injection_detected, safe_response = await check_injection(message)
+    if injection_detected:
+        return ChatResponse(
+            message=safe_response,
+            agent_type="security",
+            injection_detected=True,
+            session_id=session_id
+        )
+
+    # 3. Process with Agent
+    from graph.agent_graph import run_agent
+    result = await run_agent(message, session_id, user_id, user_role, request.conversation_history)
+    
+    return ChatResponse(
+        message=result.get("final_response") or "Bir sorun oluştu.",
+        agent_type=result.get("agent_type"),
+        action_type=result.get("action_type"),
+        action_data=result.get("action_data"),
+        injection_detected=result.get("injection_detected", False),
+        session_id=session_id,
+        intent=result.get("intent"),
+        # Agentic UI Control
+        requires_approval=result.get("requires_approval", False),
+        approval_token=result.get("approval_token"),
+        plan_data=result.get("plan_data"),
+        transaction_id=result.get("transaction_id")
+    )
+
+
 @app.post("/chat/stream", tags=["Chat"])
 async def chat_stream(
     request: ChatRequest,
@@ -136,10 +194,15 @@ async def chat_stream(
         alias="X-Authenticated-User-Id",
         description="Spring Boot'un JWT'den extract ettiği kullanıcı ID'si",
     ),
+    x_authenticated_user_role: str | None = Header(
+        default=None,
+        alias="X-Authenticated-User-Role",
+    ),
 ):
     session_id = request.session_id
     message = request.message
     user_id = x_authenticated_user_id
+    user_role = x_authenticated_user_role
 
     logger.info("chat_stream_request", session_id=session_id)
 
@@ -170,7 +233,7 @@ async def chat_stream(
 
     # 3. LangGraph Streaming Pipeline
     async def langgraph_stream():
-        async for chunk in stream_agent(message, session_id, user_id):
+        async for chunk in stream_agent(message, session_id, user_id, user_role, request.conversation_history):
             if chunk["type"] == "token":
                 yield f"data: {json.dumps({'type': 'token', 'content': chunk['content']})}\n\n"
             elif chunk["type"] == "state":
@@ -184,8 +247,13 @@ async def chat_stream(
                     "injection_detected": final_state.get("injection_detected", False),
                     "session_id": session_id,
                     "intent": final_state.get("intent"),
+                    # Agentic UI Control fields
+                    "requires_approval": final_state.get("requires_approval", False),
+                    "approval_token": final_state.get("approval_token"),
+                    "plan_data": final_state.get("plan_data"),
+                    "transaction_id": final_state.get("transaction_id"),
                 }
-                yield f"data: {json.dumps({'type': 'state', 'state': final_res})}\n\n"
+                yield f"data: {json.dumps({'type': 'state', 'state': final_res}, default=str)}\n\n"
 
     return StreamingResponse(langgraph_stream(), media_type="text/event-stream")
 

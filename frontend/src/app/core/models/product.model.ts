@@ -220,7 +220,7 @@ export interface CreateOrderRequest {
 
 // ─── AI Chat Models ──────────────────────────────────────────────────────────
 
-export type AgentActionType = 'PRODUCT_LIST' | 'CART_UPDATED' | 'NAVIGATE' | 'INFO' | 'ORDER_INFO' | 'ERROR';
+export type AgentActionType = 'PRODUCT_LIST' | 'CART_UPDATED' | 'NAVIGATE' | 'INFO' | 'ORDER_INFO' | 'ERROR' | 'APPROVAL_REQUIRED' | 'STEP_PROGRESS' | 'CHECKOUT_COMPLETE' | 'AI_FEEDBACK_REQUEST';
 export type MessageRole = 'user' | 'assistant' | 'system';
 
 export interface AgentActionResult {
@@ -238,6 +238,8 @@ export interface ChatMessage {
   actionData?: any;
   isInjectionDetected?: boolean;
   createdAt: string;
+  feedbackRequested?: boolean;
+  feedbackGiven?: boolean;
 }
 
 export interface ChatRequest {

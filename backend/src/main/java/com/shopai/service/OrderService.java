@@ -166,12 +166,17 @@ public class OrderService {
                 .map(OrderSummaryResponse::from);
     }
 
-    // ─── Sipariş Detayı ──────────────────────────────────────────────────────
     @Transactional(readOnly = true)
-    public OrderResponse getOrderDetail(Long userId, String orderNumber) {
-        // ownership check — kullanıcı yalnızca kendi siparişini görebilir
-        Order order = orderRepository.findByOrderNumberAndUserIdWithItems(orderNumber, userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber));
+    public OrderResponse getOrderDetail(Long userId, String orderNumber, boolean isAdmin) {
+        Order order;
+        if (isAdmin) {
+            order = orderRepository.findByOrderNumberWithItems(orderNumber)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber));
+        } else {
+            // ownership check — kullanıcı yalnızca kendi siparişini görebilir
+            order = orderRepository.findByOrderNumberAndUserIdWithItems(orderNumber, userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber));
+        }
         return OrderResponse.from(order);
     }
 

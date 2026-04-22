@@ -13,12 +13,16 @@ from langgraph.graph import StateGraph, END, START
 from langchain_core.messages import HumanMessage
 
 from graph.state import AgentState
-from agents.supervisor import supervisor_node, supervisor_respond, route_to_agent
+from agents.supervisor import supervisor_node, supervisor_respond, supervisor_profile_respond, route_to_agent
 from agents.filter_agent import filter_agent_node
 from agents.cart_agent import cart_agent_node
 from agents.recommend_agent import recommend_agent_node
 from agents.order_agent import order_agent_node
 from agents.faq_agent import faq_agent_node
+from agents.checkout_agent import checkout_agent_node
+from agents.navigation_agent import navigation_agent_node
+from agents.pre_validation_agent import pre_validation_agent
+from agents.multi_step_executor import multi_step_executor_node
 from config import settings
 
 logger = structlog.get_logger(__name__)
@@ -50,7 +54,12 @@ def build_graph() -> StateGraph:
     graph.add_node("recommend_agent", recommend_agent_node)
     graph.add_node("order_agent", order_agent_node)
     graph.add_node("faq_agent", faq_agent_node)
+    graph.add_node("checkout_agent", checkout_agent_node)
+    graph.add_node("navigation_agent", navigation_agent_node)
+
+    graph.add_node("multi_step_executor", multi_step_executor_node)
     graph.add_node("supervisor", supervisor_respond)  # GENERAL intent için
+    graph.add_node("supervisor_profile", supervisor_profile_respond)  # USER_PROFILE intent için
 
     # Başlangıç: supervisor'a git
     graph.add_edge(START, "supervisor_node")
@@ -65,6 +74,10 @@ def build_graph() -> StateGraph:
             "recommend_agent": "recommend_agent",
             "order_agent": "order_agent",
             "faq_agent": "faq_agent",
+            "checkout_agent": "checkout_agent",
+            "navigation_agent": "navigation_agent",
+            "multi_step_executor": "multi_step_executor",
+            "supervisor_profile": "supervisor_profile",
             "supervisor": "supervisor",
         },
     )
@@ -75,6 +88,11 @@ def build_graph() -> StateGraph:
     graph.add_edge("recommend_agent", END)
     graph.add_edge("order_agent", END)
     graph.add_edge("faq_agent", END)
+    graph.add_edge("checkout_agent", END)
+    graph.add_edge("navigation_agent", END)
+
+    graph.add_edge("multi_step_executor", END)
+    graph.add_edge("supervisor_profile", END)
     graph.add_edge("supervisor", END)
 
     return graph.compile()
@@ -101,6 +119,7 @@ async def stream_agent(
     message: str,
     session_id: str,
     user_id: str | None,
+    user_role: str | None,
     conversation_history: list[dict] | None = None,
 ):
     """
@@ -111,6 +130,7 @@ async def stream_agent(
         message: Kullanıcı mesajı (sanitize edilmiş, Spring Boot'tan gelmiş)
         session_id: Session UUID
         user_id: JWT'den extract edilen kullanıcı ID'si (None = anonim)
+        user_role: JWT'den extract edilen kullanıcı rolü (None = anonim)
         conversation_history: Geçmiş mesajlar (DB'den — {role, content} listesi)
 
     Yields:
@@ -137,6 +157,7 @@ async def stream_agent(
     initial_state: AgentState = {
         "messages": lc_history,
         "user_id": user_id,          # JWT'den — kullanıcı girdisinden ASLA değil
+        "user_role": user_role,      # JWT'den — kullanıcı girdisinden ASLA değil
         "session_id": session_id,
         "current_message": message,
         "intent": None,
@@ -147,6 +168,18 @@ async def stream_agent(
         "injection_detected": False,
         "agent_type": None,
         "error": None,
+        # Agentic UI Control fields
+        "requires_approval": False,
+        "plan_data": None,
+        "approval_token": None,
+        "approval_status": None,
+        "is_multi_step": False,
+        "transaction_id": None,
+        "current_step": None,
+        "total_steps": None,
+        "completed_steps": [],
+        "rollback_actions": [],
+        "pre_validation_result": None,
     }
 
     logger.info(
@@ -193,3 +226,20 @@ async def stream_agent(
             "error": str(e),
         }
         yield {"type": "state", "state": error_state}
+
+
+async def run_agent(
+    message: str,
+    session_id: str,
+    user_id: str | None,
+    user_role: str | None,
+    conversation_history: list[dict] | None = None,
+) -> dict:
+    """
+    Non-streaming version of agent run. Returns the final state.
+    """
+    final_state = {}
+    async for chunk in stream_agent(message, session_id, user_id, user_role, conversation_history):
+        if chunk["type"] == "state":
+            final_state = chunk["state"]
+    return final_state

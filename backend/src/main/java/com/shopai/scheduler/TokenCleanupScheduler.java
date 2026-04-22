@@ -1,5 +1,6 @@
 package com.shopai.scheduler;
 
+import com.shopai.repository.PendingApprovalRepository;
 import com.shopai.repository.RefreshTokenRepository;
 import com.shopai.repository.UserRepository;
 import com.shopai.repository.UserSessionRepository;
@@ -21,6 +22,7 @@ public class TokenCleanupScheduler {
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserSessionRepository userSessionRepository;
     private final UserRepository userRepository;
+    private final PendingApprovalRepository pendingApprovalRepository;
     private final AuditLogService auditLogService;
 
     /**
@@ -58,4 +60,21 @@ public class TokenCleanupScheduler {
             log.debug("Account unlock checked. No accounts needed unlocking.");
         }
     }
+
+    /**
+     * Her 30 dakikada bir süresi dolmuş PendingApproval kayıtlarını EXPIRED olarak işaretler.
+     * Bu, 10 dakikalık onay penceresini aşmış bekleyen onayları temizler.
+     */
+    @Scheduled(fixedRate = 1_800_000) // 30 dakika
+    @Transactional
+    public void expireStaleApprovals() {
+        LocalDateTime now = LocalDateTime.now();
+        int expiredCount = pendingApprovalRepository.expireOldApprovals(now);
+        if (expiredCount > 0) {
+            log.info("Expired {} stale pending approvals.", expiredCount);
+        } else {
+            log.debug("Approval cleanup checked. No stale approvals found.");
+        }
+    }
 }
+

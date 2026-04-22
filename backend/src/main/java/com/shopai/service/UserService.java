@@ -171,6 +171,40 @@ public class UserService {
         wishlistRepository.deleteByUserIdAndProductId(userId, productId);
     }
 
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<UserInfo> getAllUsers(int page, int size, String search, String role) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        User.Role userRole = role != null ? User.Role.valueOf(role.toUpperCase()) : null;
+        return userRepository.searchUsers(search, userRole, pageable).map(UserInfo::from);
+    }
+
+    @Transactional
+    public void deleteUser(Long userId, jakarta.servlet.http.HttpServletRequest request) {
+        User user = findUser(userId);
+        auditLogService.logEntityAction(null, "USER_DELETE_ADMIN", user, null, "User", userId, request);
+        userRepository.delete(user);
+    }
+
+    @Transactional
+    public UserInfo updateUserRole(Long userId, String role, jakarta.servlet.http.HttpServletRequest request) {
+        User user = findUser(userId);
+        User oldUser = user.toBuilder().build();
+        user.setRole(User.Role.valueOf(role.toUpperCase()));
+        User saved = userRepository.save(user);
+        auditLogService.logEntityAction(null, "USER_ROLE_UPDATE", oldUser, saved, "User", userId, request);
+        return UserInfo.from(saved);
+    }
+
+    @Transactional
+    public UserInfo toggleUserActive(Long userId, jakarta.servlet.http.HttpServletRequest request) {
+        User user = findUser(userId);
+        User oldUser = user.toBuilder().build();
+        user.setIsActive(!user.getIsActive());
+        User saved = userRepository.save(user);
+        auditLogService.logEntityAction(null, "USER_ACTIVE_TOGGLE", oldUser, saved, "User", userId, request);
+        return UserInfo.from(saved);
+    }
+
     // ─── Yorumlarım ─────────────────────────────────────────────────────────
     @Transactional(readOnly = true)
     public org.springframework.data.domain.Page<com.shopai.dto.response.ProductResponses.ReviewResponse> getMyReviews(Long userId, int page, int size) {

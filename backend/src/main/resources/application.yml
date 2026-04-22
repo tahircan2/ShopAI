@@ -106,6 +106,13 @@ springdoc:
     enabled: true   # Prod'da false yapılmalı
 
 management:
+  observations:
+    http:
+      server:
+        requests:
+          enabled: false
+    security:
+      enabled: false
   endpoints:
     web:
       exposure:

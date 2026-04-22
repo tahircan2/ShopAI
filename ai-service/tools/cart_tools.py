@@ -45,7 +45,7 @@ async def get_cart(user_id: str) -> dict:
     if not user_id:
         return {"error": "Sepeti görüntülemek için giriş yapmanız gerekiyor."}
 
-    url = f"{settings.spring_boot_base_url}/cart"
+    url = f"{settings.spring_boot_base_url}/internal/agent/user/{user_id}/cart-summary"
 
     try:
         response = await _http_client.get(url, headers=_auth_headers(user_id))
@@ -84,7 +84,7 @@ async def add_to_cart(
     if not user_id:
         return {"error": "Sepete eklemek için giriş yapmanız gerekiyor."}
 
-    url = f"{settings.spring_boot_base_url}/cart/items"
+    url = f"{settings.spring_boot_base_url}/internal/agent/cart/items"
     payload = {
         "productId": product_id,
         "quantity": quantity,
@@ -133,7 +133,7 @@ async def update_cart_item(
     if not user_id:
         return {"error": "Bu işlem için giriş yapmanız gerekiyor."}
 
-    url = f"{settings.spring_boot_base_url}/cart/items/{item_id}"
+    url = f"{settings.spring_boot_base_url}/internal/agent/cart/items/{item_id}"
 
     try:
         response = await _http_client.put(
@@ -168,7 +168,7 @@ async def remove_from_cart(user_id: str, item_id: int) -> dict:
     if not user_id:
         return {"error": "Bu işlem için giriş yapmanız gerekiyor."}
 
-    url = f"{settings.spring_boot_base_url}/cart/items/{item_id}"
+    url = f"{settings.spring_boot_base_url}/internal/agent/cart/items/{item_id}"
 
     try:
         response = await _http_client.delete(url, headers=_auth_headers(user_id))
@@ -198,7 +198,7 @@ async def clear_cart(user_id: str) -> dict:
     if not user_id:
         return {"error": "Bu işlem için giriş yapmanız gerekiyor."}
 
-    url = f"{settings.spring_boot_base_url}/cart"
+    url = f"{settings.spring_boot_base_url}/internal/agent/cart"
 
     try:
         response = await _http_client.delete(url, headers=_auth_headers(user_id))

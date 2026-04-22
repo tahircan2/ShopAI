@@ -1,6 +1,5 @@
 package com.shopai.config;
 
-
 import com.shopai.security.CsrfCookieFilter;
 import com.shopai.security.JwtAuthFilter;
 import com.shopai.security.OriginHeaderFilter;
@@ -10,15 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -42,7 +37,7 @@ public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final OriginHeaderFilter originHeaderFilter;
     private final RateLimitingFilter rateLimitingFilter;
-    private final UserDetailsService userDetailsService;
+
 
     @Value("${app.frontend.url}")
     private String frontendUrl;
@@ -56,30 +51,34 @@ public class SecurityConfig {
                 // Security Headers
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.deny()) // Clickjacking protection (X-Frame-Options: DENY)
-                        .contentTypeOptions(contentType -> contentType.disable()) // X-Content-Type-Options: nosniff (by default in Spring Security, but explicitly enforcing)
+                        .contentTypeOptions(contentType -> contentType.disable()) // X-Content-Type-Options: nosniff (by
+                                                                                  // default in Spring Security, but
+                                                                                  // explicitly enforcing)
                         // Content-Security-Policy
                         .contentSecurityPolicy(csp -> csp
-                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;")
-                        )
-                )
+                                .policyDirectives(
+                                        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;")))
 
                 // CSRF: PersistentCookieCsrfTokenRepository kullanılır.
                 // Spring'in varsayılan CookieCsrfTokenRepository'si başarılı POST sonrası
                 // cookie'yi Max-Age=0 ile siler; bu "1-accept/1-refuse" döngüsüne yol açar.
                 // Özel repository token'ı hiçbir zaman silmez.
                 .csrf(csrf -> csrf
-                    .csrfTokenRepository(new PersistentCookieCsrfTokenRepository())
-                    .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
-                    .ignoringRequestMatchers(
-                            "/api/auth/login",
-                            "/api/auth/register",
-                            "/api/auth/refresh",
-                            "/api/auth/logout",
-                            "/api/auth/forgot-password",
-                            "/api/auth/reset-password",
-                            "/api/auth/verify-email",
-                            "/api/auth/resend-verification",
-                            "/api/admin/products/**"))
+                        .csrfTokenRepository(new PersistentCookieCsrfTokenRepository())
+                        .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler())
+                        .ignoringRequestMatchers(
+                                "/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/refresh",
+                                "/api/auth/logout",
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password",
+                                "/api/auth/verify-email",
+                                "/api/auth/resend-verification",
+                                "/api/admin/products/**",
+                                "/api/agent/**",
+                                "/api/users/me/ai-preferences",
+                                "/api/internal/**"))
 
                 // Stateless — JWT cookie ile yönetilir
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -101,10 +100,19 @@ public class SecurityConfig {
                         // AI endpoint — anonim kullanıcı da chatbot kullanabilir
                         .requestMatchers("/api/ai/chat", "/api/ai/chat/stream").permitAll()
 
+                        // Internal API — Python AI Service'den gelen istekler (X-Internal-Key ile
+                        // korunur)
+                        .requestMatchers("/api/internal/**").permitAll()
+
+                        // Agent endpoints — login zorunlu
+                        .requestMatchers("/api/agent/**").authenticated()
+                        .requestMatchers("/api/users/me/ai-preferences").authenticated()
+
                         // Geri kalanlar: login zorunlu
                         .anyRequest().authenticated())
 
-                // RateLimitingFilter — Tüm trafiğin en başında, gereksiz DB yükü ve CPU tüketimini engeller
+                // RateLimitingFilter — Tüm trafiğin en başında, gereksiz DB yükü ve CPU
+                // tüketimini engeller
                 .addFilterBefore(rateLimitingFilter, CsrfFilter.class)
 
                 // OriginHeaderFilter — CSRF'ten önce çalışarak ek güvenlik sağlar
@@ -116,7 +124,6 @@ public class SecurityConfig {
                 // CsrfCookieFilter — her response'ta XSRF-TOKEN cookie'sini yazar
                 // (Spring Security 6 lazy token üretir; bu filter tetiklemeyi zorlar)
                 .addFilterAfter(new CsrfCookieFilter(), CsrfFilter.class)
-
 
                 // Exception handling
                 .exceptionHandling(ex -> ex

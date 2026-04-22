@@ -12,6 +12,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -67,6 +68,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Map<String, Object>> handleAuthentication(AuthenticationException ex) {
         return buildError(HttpStatus.UNAUTHORIZED, "Oturum süresi doldu veya geçersiz", null);
+    }
+
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleNoHandlerFound(NoHandlerFoundException ex) {
+        return buildError(HttpStatus.NOT_FOUND, "Endpoint bulunamadı: " + ex.getRequestURL(), null);
     }
 
     // Beklenmeyen hatalar — stack trace ve iç detaylar ASLA dışarı sızdırılmaz

@@ -8,6 +8,12 @@ Hiçbir secret değer bu dosyaya hardcode edilmez.
 from pydantic_settings import BaseSettings
 from pydantic import Field
 from functools import lru_cache
+from dotenv import load_dotenv
+import os
+
+# .env dosyasını os.environ'a yükle (modül düzeyinde LLM başlatmaları için gerekli)
+load_dotenv()
+
 
 
 class Settings(BaseSettings):

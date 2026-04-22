@@ -29,6 +29,7 @@
           </div>
         </div>
         <div style="margin-left:auto;display:flex;gap:4px">
+          <button class="chat-action-btn" (click)="reportBug()" title="Beklenmeyen Durum Bildir">🐞</button>
           <button class="chat-action-btn" (click)="clearChat()" title="Sohbeti Temizle">🗑️</button>
           <button class="chat-action-btn" (click)="open.set(false)">✕</button>
         </div>
@@ -36,21 +37,32 @@
 
       <!-- Messages -->
       <div class="chat-messages" #msgContainer>
-        @if (aiChat.messages().length === 0) {
-          <div class="welcome-msg">
-            <div class="welcome-icon">🤖</div>
+        @if (!aiOnboarded()) {
+          <div class="welcome-msg ai-onboarding">
+            <div class="welcome-icon">👋</div>
             <div class="welcome-text">
-              <strong>Merhaba!</strong> Size nasıl yardımcı olabilirim?
+              <h2>Aramıza Hoşgeldiniz!</h2>
+              <p>Ben ShopAI Asistan. Alışveriş asistanınız olarak <strong>ürün bulabilir</strong>, <strong>öneri verebilir</strong> ve hatta onayınız ile <strong>sizin yerinize işlemler yapabilirim</strong>.</p>
+              <p>Denemeye hazır mısınız?</p>
             </div>
+            <button class="btn btn-primary" style="margin-top: 10px;" (click)="completeOnboarding()">Başlayalım</button>
+          </div>
+        } @else {
+          @if (aiChat.messages().length === 0) {
+            <div class="welcome-msg">
+              <div class="welcome-icon">🤖</div>
+              <div class="welcome-text">
+                <strong>Merhaba!</strong> Size nasıl yardımcı olabilirim?
+              </div>
             <div class="quick-actions">
               @for (q of quickQuestions; track q) {
                 <button class="quick-btn" (click)="sendQuick(q)">{{ q }}</button>
               }
             </div>
           </div>
-        }
+          }
 
-        @for (msg of aiChat.messages(); track msg.id) {
+          @for (msg of aiChat.messages(); track msg.id) {
           <div class="msg" [class.user]="msg.role === 'user'" [class.bot]="msg.role === 'assistant'">
             @if (msg.role === 'assistant') {
               <div class="bot-avatar">AI</div>
@@ -66,19 +78,47 @@
                 <div class="chat-products">
                   @for (prod of getTop3Products(msg.actionData); track prod.id) {
                     <div class="chat-product-card" (click)="goToProductDetail(prod.slug); open.set(false)">
-                      <img [src]="prod.primaryImageUrl || 'assets/images/placeholder.jpg'" alt="{{ prod.name }}" class="cp-img" />
+                      <img [src]="prod.primaryImageUrl || 'assets/images/placeholder.png'" [alt]="prod.name" class="cp-img">
                       <div class="cp-info">
                         <div class="cp-name">{{ prod.name }}</div>
-                        <div class="cp-price">{{ prod.price }} ₺</div>
+                        <div class="cp-price">{{ prod.discountedPrice || prod.price | currencyFormat }}</div>
                       </div>
                     </div>
                   }
                   @if (hasMoreProducts(msg.actionData)) {
                     <button class="cp-show-all-btn" (click)="showAllProducts(msg.actionData)">
+                      <i class="bi bi-grid-3x3-gap"></i>
                       Tümünü Göster
                     </button>
                   }
                 </div>
+              }
+              
+              @if (msg.actionType === 'APPROVAL_REQUIRED' && msg.actionData?.approvalToken) {
+                <app-agent-approval-card 
+                  [approvalToken]="msg.actionData.approvalToken"
+                  (actionCompleted)="onApprovalCompleted(msg.id, $event)">
+                </app-agent-approval-card>
+              }
+
+              @if (msg.actionType === 'STEP_PROGRESS' && msg.actionData?.transactionId) {
+                <app-agent-progress 
+                  [transactionId]="msg.actionData.transactionId"
+                  (progressComplete)="onProgressComplete(msg, $event)">
+                </app-agent-progress>
+              }
+
+              @if (msg['feedbackRequested']) {
+                <div class="feedback-card" style="margin-top: 8px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.9em;">
+                  <p style="margin: 0 0 8px 0; font-weight: 500;">Bu işlemden memnun kaldınız mı?</p>
+                  <div class="feedback-actions" style="display: flex; gap: 8px;">
+                    <button class="btn btn-sm btn-outline-success" (click)="submitFeedback(msg, 5)" title="Başarılı">👍</button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="submitFeedback(msg, 1)" title="Geliştirilmeli">👎</button>
+                  </div>
+                </div>
+              }
+              @if (msg['feedbackGiven']) {
+                <div class="feedback-thanks" style="margin-top: 6px; font-size: 0.85em; color: var(--success);"><i class="fas fa-check"></i> Geri bildiriminiz alındı.</div>
               }
             </div>
           </div>
@@ -91,6 +131,7 @@
               <span class="dot"></span><span class="dot"></span><span class="dot"></span>
             </div>
           </div>
+        }
         }
       </div>
 
