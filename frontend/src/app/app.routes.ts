@@ -112,6 +112,16 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () => import('./features/wishlist/wishlist.component').then(m => m.WishlistComponent)
   },
+  {
+    path: 'dashboard',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/user-dashboard/user-dashboard.component').then(m => m.UserDashboardComponent)
+  },
+  {
+    path: 'ai-chat',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/ai-chat/ai-chat-page.component').then(m => m.AiChatPageComponent)
+  },
 
   // ── Admin Panel ───────────────────────────────────────────────────────────
   {

@@ -1,66 +1,107 @@
 <div class="page-header">
-  <h2>Mağaza Özeti</h2>
-  <p class="text-muted text-sm">{{ auth.currentUser()?.shopName ?? 'Mağazanız' }}</p>
+  <h2>Mağaza Dashboard</h2>
+  <p class="text-muted text-sm">Hoş geldiniz, {{ auth.currentUser()?.firstName }}! İşte mağazanızın durumu.</p>
 </div>
 
 @if (loading()) {
   <div class="stats-grid">
     @for (i of [1,2,3,4]; track i) {
-      <div class="skeleton" style="height:90px;border-radius:var(--radius-lg)"></div>
+      <div class="skeleton" style="height:110px;border-radius:var(--radius-lg)"></div>
     }
   </div>
+  <div class="charts-row">
+    <div class="skeleton" style="height:280px;border-radius:var(--radius-lg)"></div>
+    <div class="skeleton" style="height:280px;border-radius:var(--radius-lg)"></div>
+  </div>
 } @else {
+  <!-- KPI Cards -->
   <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon">📦</div>
-      <div>
-        <div class="stat-label">Toplam Ürün</div>
-        <div class="stat-value">{{ stats()?.totalProducts ?? 0 }}</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🛒</div>
-      <div>
-        <div class="stat-label">Toplam Sipariş</div>
-        <div class="stat-value">{{ stats()?.totalOrders ?? 0 }}</div>
-      </div>
-    </div>
-    <div class="stat-card warning">
-      <div class="stat-icon">⏳</div>
-      <div>
-        <div class="stat-label">Bekleyen</div>
-        <div class="stat-value">{{ stats()?.pendingOrders ?? 0 }}</div>
-      </div>
-    </div>
-    <div class="stat-card success">
+    <div class="stat-card accent-indigo">
       <div class="stat-icon">💰</div>
-      <div>
-        <div class="stat-label">Bu Ay Gelir</div>
-        <div class="stat-value">₺{{ (stats()?.monthlyRevenue ?? 0).toFixed(0) }}</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">⭐</div>
-      <div>
-        <div class="stat-label">Ort. Puan</div>
-        <div class="stat-value">{{ (stats()?.avgRating ?? 0).toFixed(1) }}</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">💵</div>
-      <div>
+      <div class="stat-body">
         <div class="stat-label">Toplam Gelir</div>
-        <div class="stat-value">₺{{ (stats()?.totalRevenue ?? 0).toFixed(0) }}</div>
+        <div class="stat-value">₺{{ revenue()?.totalRevenue | number:'1.0-0' }}</div>
+        <div class="stat-change" [class.positive]="(revenue()?.change ?? 0) >= 0" [class.negative]="(revenue()?.change ?? 0) < 0">
+          {{ (revenue()?.change ?? 0) >= 0 ? '↑' : '↓' }} {{ revenue()?.change | number:'1.1-1' }}% (30 gün)
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card accent-cyan">
+      <div class="stat-icon">📦</div>
+      <div class="stat-body">
+        <div class="stat-label">Toplam Sipariş</div>
+        <div class="stat-value">{{ orders()?.totalOrders | number }}</div>
+        <div class="stat-change" [class.positive]="(orders()?.change ?? 0) >= 0" [class.negative]="(orders()?.change ?? 0) < 0">
+          {{ (orders()?.change ?? 0) >= 0 ? '↑' : '↓' }} {{ orders()?.change | number:'1.1-1' }}% (30 gün)
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card accent-green">
+      <div class="stat-icon">👥</div>
+      <div class="stat-body">
+        <div class="stat-label">Müşteriler</div>
+        <div class="stat-value">{{ customers()?.totalCustomers | number }}</div>
+        <div class="stat-sub">+{{ customers()?.newThisMonth }} bu ay</div>
+      </div>
+    </div>
+
+    <div class="stat-card accent-amber">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-body">
+        <div class="stat-label">Ort. Puan</div>
+        <div class="stat-value">{{ avgRating()?.avgRating | number:'1.1-1' }}</div>
+        <div class="stat-sub">/ 5.0</div>
       </div>
     </div>
   </div>
 
-  <div class="quick-actions">
-    <h3>Hızlı İşlemler</h3>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="action-card" routerLink="/seller/products">📦 Ürün Ekle</a>
-      <a class="action-card" routerLink="/seller/orders">🛒 Siparişleri Gör</a>
-      <a class="action-card" routerLink="/seller/shop">🏪 Mağaza Düzenle</a>
+  <!-- Charts Row -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Gelir Trendi (Son 7 Gün)</h3>
+      <div class="chart-wrap"><canvas #revenueCanvas></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Kategori Dağılımı</h3>
+      <div class="chart-wrap"><canvas #categoryCanvas></canvas></div>
+    </div>
+  </div>
+
+  <!-- Top Products + Recent Orders -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>En Çok Satan Ürünler</h3>
+      <div class="chart-wrap"><canvas #topProductsCanvas></canvas></div>
+    </div>
+    <div class="chart-card table-card">
+      <h3>Son Siparişler</h3>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Sipariş</th>
+              <th>Müşteri</th>
+              <th>Tutar</th>
+              <th>Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of recentOrders(); track order.orderNumber) {
+              <tr>
+                <td class="mono">{{ order.orderNumber }}</td>
+                <td>{{ order.customerName }}</td>
+                <td class="mono">₺{{ order.total | number:'1.0-0' }}</td>
+                <td><span class="badge" [class]="getStatusClass(order.status)">{{ order.status }}</span></td>
+              </tr>
+            }
+            @if (recentOrders().length === 0) {
+              <tr><td colspan="4" class="text-muted text-center">Henüz sipariş yok</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 }

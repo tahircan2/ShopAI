@@ -1,0 +1,111 @@
+<div class="dashboard-container">
+  <div class="page-header">
+    <h2>{{ getMembershipIcon() }} {{ auth.currentUser()?.firstName }}'ın Paneli</h2>
+    <p class="text-muted text-sm">Kişisel alışveriş analitikleriniz</p>
+  </div>
+
+  @if (loading()) {
+    <div class="stats-grid">
+      @for (i of [1,2,3,4]; track i) {
+        <div class="skeleton" style="height:110px;border-radius:var(--radius-lg)"></div>
+      }
+    </div>
+  } @else {
+    <!-- KPI Cards -->
+    <div class="stats-grid">
+      <div class="stat-card accent-indigo">
+        <div class="stat-icon">💳</div>
+        <div class="stat-body">
+          <div class="stat-label">Toplam Harcama</div>
+          <div class="stat-value">₺{{ personal()?.totalSpend | number:'1.0-0' }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card accent-cyan">
+        <div class="stat-icon">📦</div>
+        <div class="stat-body">
+          <div class="stat-label">Toplam Sipariş</div>
+          <div class="stat-value">{{ personal()?.totalOrders | number }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card accent-green">
+        <div class="stat-icon">🧾</div>
+        <div class="stat-body">
+          <div class="stat-label">Ort. Sipariş</div>
+          <div class="stat-value">₺{{ personal()?.avgOrderValue | number:'1.0-0' }}</div>
+        </div>
+      </div>
+
+      <div class="stat-card accent-amber membership-card">
+        <div class="stat-icon">{{ getMembershipIcon() }}</div>
+        <div class="stat-body">
+          <div class="stat-label">Üyelik Seviyesi</div>
+          <div class="stat-value">{{ personal()?.membership }}</div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar" [style.width.%]="personal()?.membershipProgress"></div>
+          </div>
+          @if (personal()?.membership !== 'Gold') {
+            <div class="stat-sub">Bir sonraki seviyeye ₺{{ personal()?.nextThreshold | number:'1.0-0' }} kaldı</div>
+          } @else {
+            <div class="stat-sub text-gold">En üst seviye! 🎉</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-row">
+      <div class="chart-card">
+        <h3>📊 Aylık Harcama Trendi</h3>
+        <div class="chart-wrap"><canvas #spendCanvas></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>🏷️ Kategori Dağılımı</h3>
+        <div class="chart-wrap"><canvas #categoryCanvas></canvas></div>
+      </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="section-card">
+      <h3>🕐 Son Siparişler</h3>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Sipariş No</th>
+              <th>Tarih</th>
+              <th>Ürün</th>
+              <th>Tutar</th>
+              <th>Durum</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of recentOrders(); track order.orderNumber) {
+              <tr>
+                <td class="mono">{{ order.orderNumber }}</td>
+                <td class="text-sm">{{ order.createdAt | date:'dd/MM/yyyy' }}</td>
+                <td>{{ order.itemCount }} ürün</td>
+                <td class="mono">₺{{ order.totalAmount | number:'1.0-0' }}</td>
+                <td><span class="badge" [class]="getStatusClass(order.status)">{{ order.status }}</span></td>
+              </tr>
+            }
+            @if (recentOrders().length === 0) {
+              <tr><td colspan="5" class="text-muted text-center">Henüz sipariş yok</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <div class="action-cards">
+        <a class="action-card" routerLink="/products"><span>🛍️</span> Alışverişe Devam</a>
+        <a class="action-card" routerLink="/orders"><span>📋</span> Siparişlerim</a>
+        <a class="action-card" routerLink="/wishlist"><span>❤️</span> İstek Listem</a>
+        <a class="action-card" routerLink="/profile"><span>👤</span> Profilim</a>
+      </div>
+    </div>
+  }
+</div>

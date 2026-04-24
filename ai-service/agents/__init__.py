@@ -8,6 +8,7 @@ from .checkout_agent import checkout_agent_node
 from .navigation_agent import navigation_agent_node
 from .pre_validation_agent import pre_validation_agent
 from .multi_step_executor import multi_step_executor_node
+from .analytics_agent import analytics_agent_node
 
 __all__ = [
     "supervisor_node",
@@ -20,6 +21,7 @@ __all__ = [
     "checkout_agent_node",
     "navigation_agent_node",
     "pre_validation_agent",
-    "multi_step_executor_node"
+    "multi_step_executor_node",
+    "analytics_agent_node"
 ]
 

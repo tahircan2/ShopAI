@@ -29,6 +29,7 @@ class AgentActionType(str, Enum):
     APPROVAL_REQUIRED = "APPROVAL_REQUIRED"   # Frontend'de onay kartı göster
     STEP_PROGRESS = "STEP_PROGRESS"           # Frontend'de progress stepper göster
     CHECKOUT_COMPLETE = "CHECKOUT_COMPLETE"   # Checkout tamamlandı bildirimi
+    ANALYTICS_RESULT = "ANALYTICS_RESULT"     # Grafik + analiz verisi
 
 
 class IntentType(str, Enum):
@@ -42,6 +43,7 @@ class IntentType(str, Enum):
     CHECKOUT = "CHECKOUT"
     NAVIGATE = "NAVIGATE"
     USER_PROFILE = "USER_PROFILE"
+    ANALYTICS = "ANALYTICS"
 
 
 class ChatRequest(BaseModel):

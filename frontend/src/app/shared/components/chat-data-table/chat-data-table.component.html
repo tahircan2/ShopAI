@@ -1,0 +1,58 @@
+<div class="data-table-container">
+  <div class="table-toolbar">
+    <input
+      type="text"
+      class="filter-input"
+      placeholder="Tabloda ara..."
+      (input)="onFilter($event)"
+    />
+    <button class="csv-btn" (click)="downloadCsv()" [disabled]="!filteredData().length">
+      📥 CSV İndir
+    </button>
+  </div>
+
+  @if (columns().length === 0) {
+    <div class="empty-state">Veri bulunamadı</div>
+  } @else {
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            @for (col of columns(); track col) {
+              <th (click)="toggleSort(col)" [class.numeric]="pagedData().length > 0 && isNumeric(pagedData()[0][col])">
+                {{ col }}
+                <span class="sort-icon">{{ getSortIcon(col) }}</span>
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of pagedData(); track $index) {
+            <tr>
+              @for (col of columns(); track col) {
+                <td
+                  [class.numeric]="isNumeric(row[col])"
+                  [class.null-val]="row[col] == null"
+                  [title]="fullText(row[col])"
+                >
+                  {{ formatCell(row[col]) }}
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="pagination">
+        <button class="page-btn" (click)="goToPage(currentPage() - 1)" [disabled]="currentPage() === 0">‹</button>
+        @for (p of pageNumbers(); track p) {
+          <button class="page-btn" [class.active]="p === currentPage()" (click)="goToPage(p)">{{ p + 1 }}</button>
+        }
+        <button class="page-btn" (click)="goToPage(currentPage() + 1)" [disabled]="currentPage() >= totalPages() - 1">›</button>
+        <span class="page-info">{{ filteredData().length }} satır</span>
+      </div>
+    }
+  }
+</div>

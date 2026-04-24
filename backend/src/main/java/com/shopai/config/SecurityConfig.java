@@ -78,7 +78,8 @@ public class SecurityConfig {
                                 "/api/admin/products/**",
                                 "/api/agent/**",
                                 "/api/users/me/ai-preferences",
-                                "/api/internal/**"))
+                                "/api/internal/**",
+                                "/api/internal/analytics/**"))
 
                 // Stateless — JWT cookie ile yönetilir
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

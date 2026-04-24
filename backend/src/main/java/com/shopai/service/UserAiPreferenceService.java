@@ -6,6 +6,7 @@ import com.shopai.dto.request.AgentRequests.UpdateAiPreferenceRequest;
 import com.shopai.entity.User;
 import com.shopai.entity.UserAiPreference;
 import com.shopai.exception.ResourceNotFoundException;
+import com.shopai.dto.response.AgentResponses.AiPreferenceResponse;
 import com.shopai.repository.UserAiPreferenceRepository;
 import com.shopai.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ public class UserAiPreferenceService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UserAiPreference getPreferences(Long userId) {
         return preferenceRepository.findByUserId(userId)
                 .orElseGet(() -> createDefaultPreference(userId));
@@ -49,6 +50,41 @@ public class UserAiPreferenceService {
         return preferenceRepository.save(pref);
     }
 
+    @Transactional(readOnly = true)
+    public AiPreferenceResponse getPreferencesResponse(Long userId) {
+        UserAiPreference pref = getPreferences(userId);
+        return mapToResponse(pref);
+    }
+
+    @Transactional
+    public AiPreferenceResponse updatePreferencesResponse(Long userId, UpdateAiPreferenceRequest req) {
+        UserAiPreference pref = updatePreferences(userId, req);
+        return mapToResponse(pref);
+    }
+
+    private AiPreferenceResponse mapToResponse(UserAiPreference pref) {
+        java.util.List<String> categories = java.util.Collections.emptyList();
+        if (pref.getAutoApproveCategories() != null) {
+            try {
+                categories = objectMapper.readValue(pref.getAutoApproveCategories(), 
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<String>>() {});
+            } catch (JsonProcessingException e) {
+                log.error("Failed to deserialize categories", e);
+            }
+        }
+
+        return AiPreferenceResponse.builder()
+                .autoApproveEnabled(pref.getAutoApproveEnabled())
+                .autoApproveMaxAmount(pref.getAutoApproveMaxAmount())
+                .autoApproveCategories(categories)
+                .useDefaultAddress(pref.getUseDefaultAddress())
+                .useDefaultPayment(pref.getUseDefaultPayment())
+                .dailyTransactionLimit(pref.getDailyTransactionLimit())
+                .maxOrderAmount(pref.getMaxOrderAmount())
+                .todayTransactionCount(0) // Basit tutmak için 0 döner, gerekirse eklenebilir
+                .build();
+    }
+
     @Transactional
     public UserAiPreference createDefaultPreference(Long userId) {
         User user = userRepository.findById(userId)
@@ -60,6 +96,7 @@ public class UserAiPreferenceService {
                 .useDefaultAddress(true)
                 .useDefaultPayment(true)
                 .dailyTransactionLimit(10)
+                .maxOrderAmount(new java.math.BigDecimal("5000.00"))
                 .build();
         
         return preferenceRepository.save(pref);

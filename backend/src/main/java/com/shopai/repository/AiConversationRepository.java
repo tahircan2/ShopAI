@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface AiConversationRepository extends JpaRepository<AiConversation, Long> {
     Optional<AiConversation> findBySessionIdAndUserId(String sessionId, Long userId);
     Optional<AiConversation> findBySessionId(String sessionId);
+    java.util.List<AiConversation> findByUserIdOrderByLastMessageAtDesc(Long userId);
 }

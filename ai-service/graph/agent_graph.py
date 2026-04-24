@@ -23,6 +23,7 @@ from agents.checkout_agent import checkout_agent_node
 from agents.navigation_agent import navigation_agent_node
 from agents.pre_validation_agent import pre_validation_agent
 from agents.multi_step_executor import multi_step_executor_node
+from agents.analytics_agent import analytics_agent_node
 from config import settings
 
 logger = structlog.get_logger(__name__)
@@ -56,6 +57,7 @@ def build_graph() -> StateGraph:
     graph.add_node("faq_agent", faq_agent_node)
     graph.add_node("checkout_agent", checkout_agent_node)
     graph.add_node("navigation_agent", navigation_agent_node)
+    graph.add_node("analytics_agent", analytics_agent_node)
 
     graph.add_node("multi_step_executor", multi_step_executor_node)
     graph.add_node("supervisor", supervisor_respond)  # GENERAL intent için
@@ -79,6 +81,7 @@ def build_graph() -> StateGraph:
             "multi_step_executor": "multi_step_executor",
             "supervisor_profile": "supervisor_profile",
             "supervisor": "supervisor",
+            "analytics_agent": "analytics_agent",
         },
     )
 
@@ -90,6 +93,7 @@ def build_graph() -> StateGraph:
     graph.add_edge("faq_agent", END)
     graph.add_edge("checkout_agent", END)
     graph.add_edge("navigation_agent", END)
+    graph.add_edge("analytics_agent", END)
 
     graph.add_edge("multi_step_executor", END)
     graph.add_edge("supervisor_profile", END)
@@ -180,6 +184,11 @@ async def stream_agent(
         "completed_steps": [],
         "rollback_actions": [],
         "pre_validation_result": None,
+        # Text2SQL Analytics fields
+        "generated_sql": None,
+        "sql_results": None,
+        "analysis_text": None,
+        "chart_config": None,
     }
 
     logger.info(

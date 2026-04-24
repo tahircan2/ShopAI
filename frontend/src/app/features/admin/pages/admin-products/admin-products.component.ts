@@ -51,7 +51,7 @@ export class AdminProductsComponent implements OnInit {
 
   load(): void {
     this.loading.set(true);
-    this.productService.getProducts({ page: this.page(), size: 15 }).subscribe({
+    this.productService.getAdminProducts(this.page(), 20).subscribe({
       next: res => { this.products.set(res.content); this.totalPages.set(res.totalPages); this.loading.set(false); },
       error: () => this.loading.set(false)
     });

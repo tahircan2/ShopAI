@@ -41,12 +41,22 @@ INTENT_TO_AGENT: dict[str, str] = {
     IntentType.NAVIGATE: "navigation_agent",
     IntentType.USER_PROFILE: "supervisor_profile",    # Supervisor profil yanıtı verir
     IntentType.GENERAL: "supervisor",                 # Supervisor doğrudan yanıtlar
+    IntentType.ANALYTICS: "analytics_agent",          # Text2SQL analytics
 }
 
 # Intent classification için sistem promptu
 SUPERVISOR_SYSTEM_PROMPT = """Sen ShopAI e-ticaret platformunun yönlendirme sistemisin.
 Kullanıcı mesajını analiz et ve YALNIZCA aşağıdaki intent etiketlerinden birini döndür.
+ÖNEMLİ: Geçmişteki sistem hatalarını, 'Sorgu çalıştırılamadı' gibi mesajları veya asistanın 'Erişimim yok' şeklindeki ÖNCEKİ reddetme mesajlarını KESİNLİKLE dikkate alma. 
+Kullanıcı yeni bir veri sorusu soruyorsa (satış, puan, ciro vb.), asistan daha önce 'yok' demiş olsa bile bunu ANALYTICS olarak sınıflandır. 
+Sadece kullanıcının mevcut mesajındaki niyetini belirle.
 Başka hiçbir şey yazma — sadece etiket:
+
+ANALYTICS — Veri analizi, istatistik, rapor, grafik, satış özetleri, en çok satanlar, puan dağılımları
+  Örnekler: "bu ayki gelir ne kadar", "📊 Bu haftaki satışlarım", "🏆 En çok satan 5 ürünüm", "haftalık satış trendi",
+  "müşteri dağılımı göster", "ortalama sipariş değeri", "gelir raporu", "⭐ Ürünlerimin puan dağılımı",
+  "hangi ürünler en çok satıyor", "aylık karşılaştırma", "🛍️ Kategoriye göre satışlarım"
+  NOT: Sadece ADMIN ve SELLER kullanıcılar için geçerlidir. Satış ve performans ile ilgili her şey buraya gider.
 
 PRODUCT_FILTER — Ürün arama, filtreleme, listeleme
   Örnekler: "kırmızı nike ayakkabı göster", "200 TL altı tişört", "en ucuz laptop", "sehpa bul"
@@ -122,16 +132,18 @@ async def classify_intent(messages: list[BaseMessage]) -> str:
         return IntentType.GENERAL
 
 
-GENERAL_SYSTEM_PROMPT = """Sen ShopAI e-ticaret platformunun yardımcı asistanısın.
-Kullanıcılara şu konularda aktif destek verirsin:
-- Ürün arama, filtreleme ve detaylı bilgi
-- Sepet işlemleri ve satın alma (checkout) süreçleri
-- Sipariş takibi ve geçmiş siparişlerin sorgulanması
-- Kargo, iade ve ödeme yöntemleri hakkındaki sorular
+GENERAL_SYSTEM_PROMPT = """Siz ShopAI'nın kurumsal ve profesyonel ana asistanısınız. 
+Kullanıcılara e-ticaret platformumuzdaki tüm süreçlerde rehberlik edersiniz.
 
-Eğer bir işlem için onay bekliyorsak, kullanıcıyı o onay kartına yönlendir.
-Ödeme ve satın alma işlemlerinde yetkili agent'lara (checkout_agent) yönlendirme yapabilirsin.
-Kısa, net ve samimi yanıtlar ver. Türkçe ve İngilizce anlarsın, kullanıcının dilinde yanıtla."""
+İLETİŞİM PRENSİPLERİNİZ:
+1. **Profesyonellik**: Her zaman 'Siz' dilini kullanın. Modern, nazik ve çözüm odaklı bir iş ortağı gibi davranın. Teknik terimlerden (SQL, ID, null vb.) KESİNLİKLE kaçının.
+2. **Kısalık**: Yanıtlarınız öz ve net olsun. Kullanıcı detay istemediği sürece uzun açıklamalar yapmayın.
+3. **Yapılandırma**: Yanıtlarınızı Markdown kullanarak (başlıklar, listeler, kalın yazılar) kolay okunabilir hale getirin.
+4. **Zarafet**: Emoji kullanımını şık ve yerinde yapın (örn: ✨, 🛍️, 🤝).
+5. **Yönlendirme**: Eğer kullanıcı ne yapacağını bilemiyorsa, ona en popüler kategorileri veya kampanyaları incelemesini nazikçe önerin.
+
+NOT: Sohbeti her zaman profesyonel bir selamlamayla başlatın veya nazik bir kapanışla bitirin.
+"""
 
 
 async def supervisor_respond(state: AgentState) -> AgentState:
@@ -139,6 +151,9 @@ async def supervisor_respond(state: AgentState) -> AgentState:
     GENERAL intent için Supervisor doğrudan yanıtlar.
     Ayrı bir sub-agent'a yönlendirmez.
     """
+    if state.get("final_response"):
+        return state
+
     llm = ChatOpenAI(
         model=settings.openai_model,
         temperature=0.7,
@@ -152,9 +167,9 @@ async def supervisor_respond(state: AgentState) -> AgentState:
     # Rol tabanlı yönlendirme
     user_role = state.get("user_role")
     role_instruction = ""
-    if user_role == "ROLE_ADMIN":
+    if user_role in ("ROLE_ADMIN", "ADMIN"):
         role_instruction = "\nSen bir ADMIN ile konuşuyorsun. Tüm verilere tam erişim yetkisi var."
-    elif user_role == "ROLE_SELLER":
+    elif user_role in ("ROLE_SELLER", "SELLER"):
         role_instruction = "\nKullanıcı bir SATICI (SELLER). Sadece kendi satışları ve ürünleriyle ilgili özel bilgiler verebilir."
     else:
         role_instruction = "\nKullanıcı normal bir USER'dır. Başkalarına ait özel bilgileri veya siparişleri KESİNLİKLE paylaşma."
@@ -336,7 +351,15 @@ async def supervisor_node(state: AgentState) -> AgentState:
         }
 
     # Normal Intent classification (Tüm geçmiş ile)
-    intent = await classify_intent(messages)
+    # Hızlı Aksiyonlar ve Kritik Terimler için Ön-Kontrol (Safety Net)
+    analytics_keywords = ["satışlarım", "cirom", "kazancım", "en çok satan", "puan dağılımı", "kategoriye göre", "satış trendi"]
+    user_role = state.get("user_role", "")
+    is_seller_or_admin = user_role in ("ROLE_ADMIN", "ROLE_SELLER", "ADMIN", "SELLER")
+    
+    if any(kw in message.lower() for kw in analytics_keywords) and is_seller_or_admin:
+        intent = IntentType.ANALYTICS
+    else:
+        intent = await classify_intent(messages)
 
     # Agent seç
     selected_agent = INTENT_TO_AGENT.get(intent, "supervisor")

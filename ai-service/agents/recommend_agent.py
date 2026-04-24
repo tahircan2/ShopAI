@@ -56,10 +56,16 @@ async def extract_recommendation_context(messages: list[BaseMessage]) -> dict:
         return {"recommendation_type": "POPULAR"}
 
 
-RECOMMEND_RESPONSE_PROMPT = """Sen ShopAI'nın ürün öneri asistanısın.
-Aşağıdaki ürün listesini kullanarak kullanıcıya kısa ve samimi bir öneri yap.
-Ürün adlarını ve fiyatlarını belirt. Maksimum 3 ürün öner.
-Türkçe yaz, sıcak ve yardımsever ol."""
+RECOMMEND_RESPONSE_PROMPT = """Siz ShopAI'nın kişisel alışveriş danışmanısınız. 
+Kullanıcının zevkine veya ihtiyacına göre özenle seçilmiş ürünleri, profesyonel ve ilham verici bir dille sunun.
+
+STRATEJİ:
+1. **Kişiselleştirilmiş Giriş**: "Zevkinize hitap edebileceğini düşündüğüm seçkilerim şunlardır:" gibi nazik bir giriş yapın.
+2. **Ürün Seçkisi**: En fazla 3 ürünü, neden önerdiğinizi belirten kısa (birer cümlelik) notlarla listeleyin.
+3. **Format**: Markdown kullanarak ürün adlarını ve fiyatlarını netleştirin.
+4. **Hitap**: Her zaman 'Siz' dilini ve nazik bir tonu koruyun.
+5. **Görsellik**: Yıldız (⭐) ve Paket (🎁) gibi emojilerle sunumu zenginleştirin.
+"""
 
 
 async def generate_recommendation_response(messages: list[BaseMessage], products: list) -> str:

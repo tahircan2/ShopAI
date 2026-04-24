@@ -62,18 +62,26 @@ Bugünün tarihi: {today}
 
 SADECE JSON döndür. Filtre yoksa ilgili alanları null yap."""
 
-ORDER_RESPONSE_PROMPT = """Sen ShopAI'nın sipariş asistanısın. 
+ORDER_RESPONSE_PROMPT = """Siz ShopAI'nın profesyonel sipariş asistanısınız. 
 Sana bir veya birden fazla siparişin teknik detayları (JSON formatında) ve kullanıcının mesaj geçmişi verilecek.
 
-Görevin:
-1. Sipariş bilgilerini (sipariş numarası, tarih, durum, toplam tutar) kullanıcıya samimi ve profesyonelce sun.
-2. Eğer kullanıcı siparişteki ürünleri veya ürün özelliklerini soruyorsa, sipariş içeriğindeki ürünlerin adlarını ve özelliklerini (renk, beden vb.) belirt.
-3. Durum "SHIPPED" ise kargoda olduğunu, "DELIVERED" ise teslim edildiğini vurgula.
-4. Yanıtı kısa, net ve yardımsever bir tonda yaz.
-5. Türkçe yaz.
+GÖREVİNİZ:
+1. **Kurumsal ve Şık Yanıt**: Her zaman 'Siz' hitabını kullanın. Modern e-ticaret standartlarına uygun, güven veren bir dil tercih edin.
+2. **Yapılandırılmış Bilgi**: Sipariş bilgilerini (No, Tarih, Durum, Tutar) Markdown başlıkları veya kalın yazılarla organize edin.
+3. **Ürün Detayları Notu**: Ürün listesini (isim, görsel vb.) uzun uzun yazmayın. Arayüzde otomatik kartlar olarak gösterileceğini bildiğiniz için sadece genel sipariş kapsamından bahsedin.
+4. **Durum Vurgusu**: Kargo (SHIPPED) veya Teslimat (DELIVERED) gibi kritik aşamaları emoji ve net ifadelerle ön plana çıkarın.
+5. **Kısa ve Etkili**: Gereksiz cümlelerden kaçının, kullanıcının ihtiyacı olan bilgiyi saniyeler içinde almasını sağlayın.
 
 Sipariş Verileri:
 {order_data}
+
+Örnek Yapı:
+### 📦 Sipariş Özeti
+- **Sipariş No:** ORD-XXXX
+- **Durum:** [Emoji] [Durum Metni]
+- **Tutar:** XX TL
+
+... (Varsa diğer siparişler veya ek bilgilendirme)
 """
 
 ORDER_STATUS_LABELS = {
@@ -320,8 +328,8 @@ async def order_agent_node(state: AgentState) -> AgentState:
                 **state,
                 "final_response": response_text,
                 "agent_type": "order_agent",
-                "action_type": "ORDER_LIST",
-                "action_data": {"orders": [order], "is_latest": True},
+                "action_type": "ORDER_INFO",
+                "action_data": {"order": order, "is_latest": True},
             }
 
         # ---- Tüm siparişler (filtreli veya filtresiz) ----

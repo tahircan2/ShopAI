@@ -22,14 +22,14 @@ public class UserAiPreferenceController {
 
     @GetMapping
     @Operation(summary = "Kullanıcının AI tercihlerini getir")
-    public ResponseEntity<UserAiPreference> getPreferences(@AuthenticationPrincipal JwtAuthDetails auth) {
-        return ResponseEntity.ok(preferenceService.getPreferences(auth.getUserId()));
+    public ResponseEntity<com.shopai.dto.response.AgentResponses.AiPreferenceResponse> getPreferences(@AuthenticationPrincipal JwtAuthDetails auth) {
+        return ResponseEntity.ok(preferenceService.getPreferencesResponse(auth.getUserId()));
     }
 
     @PutMapping
     @Operation(summary = "AI tercihlerini güncelle")
-    public ResponseEntity<UserAiPreference> updatePreferences(@AuthenticationPrincipal JwtAuthDetails auth,
+    public ResponseEntity<com.shopai.dto.response.AgentResponses.AiPreferenceResponse> updatePreferences(@AuthenticationPrincipal JwtAuthDetails auth,
                                                             @Valid @RequestBody UpdateAiPreferenceRequest req) {
-        return ResponseEntity.ok(preferenceService.updatePreferences(auth.getUserId(), req));
+        return ResponseEntity.ok(preferenceService.updatePreferencesResponse(auth.getUserId(), req));
     }
 }

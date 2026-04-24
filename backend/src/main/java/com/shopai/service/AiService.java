@@ -229,10 +229,17 @@ public class AiService {
     // ─── Konuşma Geçmişi (ownership check) ──────────────────────────────────
     @Transactional(readOnly = true)
     public Map<String, Object> getConversation(String sessionId, Long userId) {
-        AiConversation conversation = conversationRepository.findBySessionIdAndUserId(sessionId, userId)
-                .orElseThrow(() -> new com.shopai.exception.ResourceNotFoundException(
-                        "Konuşma bulunamadı veya erişim yetkiniz yok"));
+        var conversationOpt = conversationRepository.findBySessionIdAndUserId(sessionId, userId);
+        
+        if (conversationOpt.isEmpty()) {
+            return Map.of(
+                "sessionId", sessionId,
+                "messageCount", 0,
+                "messages", java.util.Collections.emptyList()
+            );
+        }
 
+        AiConversation conversation = conversationOpt.get();
         var messages = messageRepository.findByConversationIdOrderByCreatedAtAsc(conversation.getId())
                 .stream()
                 .map(m -> Map.of(
@@ -257,6 +264,21 @@ public class AiService {
                 .orElseThrow(() -> new com.shopai.exception.ResourceNotFoundException(
                         "Konuşma bulunamadı veya erişim yetkiniz yok"));
         conversationRepository.delete(conversation);
+    }
+
+    // ─── Konuşma Listesi ──────────────────────────────────────────────────
+    @Transactional(readOnly = true)
+    public java.util.List<Map<String, Object>> listConversations(Long userId) {
+        return conversationRepository.findByUserIdOrderByLastMessageAtDesc(userId)
+                .stream()
+                .map(c -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("sessionId", c.getSessionId());
+                    map.put("lastMessageAt", c.getLastMessageAt() != null ? c.getLastMessageAt().toString() : c.getStartedAt().toString());
+                    map.put("messageCount", c.getMessageCount());
+                    return map;
+                })
+                .toList();
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

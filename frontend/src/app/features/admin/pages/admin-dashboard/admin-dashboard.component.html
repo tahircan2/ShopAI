@@ -1,50 +1,115 @@
 <div class="page-header">
   <h2>Dashboard</h2>
-  <p class="text-muted text-sm">Genel sistem istatistikleri</p>
+  <p class="text-muted text-sm">Platform geneli analitik ve istatistikler</p>
 </div>
 
 @if (loading()) {
   <div class="stats-grid">
     @for (i of [1,2,3,4,5,6]; track i) {
-      <div class="skeleton" style="height:90px;border-radius:var(--radius-lg)"></div>
+      <div class="skeleton" style="height:110px;border-radius:var(--radius-lg)"></div>
     }
   </div>
 } @else {
+  <!-- KPI Cards -->
   <div class="stats-grid">
     <div class="stat-card">
       <div class="stat-icon">👥</div>
       <div class="stat-body">
         <div class="stat-label">Toplam Kullanıcı</div>
-        <div class="stat-value">{{ stats()?.totalUsers | number }}</div>
-        <div class="stat-sub text-success">+{{ stats()?.newUsersThisMonth }} bu ay</div>
+        <div class="stat-value">{{ users()?.total | number }}</div>
+        <div class="stat-sub text-success">+{{ users()?.newThisMonth }} bu ay</div>
       </div>
     </div>
     <div class="stat-card">
-      <div class="stat-icon">📦</div>
+      <div class="stat-icon">🏪</div>
       <div class="stat-body">
-        <div class="stat-label">Toplam Ürün</div>
-        <div class="stat-value">{{ stats()?.totalProducts | number }}</div>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🛒</div>
-      <div class="stat-body">
-        <div class="stat-label">Toplam Sipariş</div>
-        <div class="stat-value">{{ stats()?.totalOrders | number }}</div>
-      </div>
-    </div>
-    <div class="stat-card warning">
-      <div class="stat-icon">⏳</div>
-      <div class="stat-body">
-        <div class="stat-label">Bekleyen Sipariş</div>
-        <div class="stat-value">{{ stats()?.pendingOrders | number }}</div>
+        <div class="stat-label">Aktif Mağazalar</div>
+        <div class="stat-value">{{ stores()?.active | number }} / {{ stores()?.total | number }}</div>
+        <div class="stat-sub text-success">+{{ stores()?.newThisMonth }} bu ay</div>
       </div>
     </div>
     <div class="stat-card success">
       <div class="stat-icon">💰</div>
       <div class="stat-body">
-        <div class="stat-label">Toplam Gelir</div>
-        <div class="stat-value">₺{{ stats()?.totalRevenue?.toFixed(0) | number }}</div>
+        <div class="stat-label">Platform Geliri</div>
+        <div class="stat-value">₺{{ revenue()?.totalRevenue | number:'1.0-0' }}</div>
+        @if (revenue()?.change !== undefined) {
+          <div class="stat-change" [class.positive]="revenue()?.change >= 0" [class.negative]="revenue()?.change < 0">
+            {{ revenue()?.change >= 0 ? '↑' : '↓' }} {{ revenue()?.change | number:'1.1-1' }}%
+          </div>
+        }
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🛒</div>
+      <div class="stat-body">
+        <div class="stat-label">Ort. Sipariş Değeri</div>
+        <div class="stat-value">₺{{ aov()?.avgOrderValue | number:'1.0-0' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row 1: Revenue Trend + Role Distribution -->
+  <div class="charts-row">
+    <div class="chart-card" style="flex:2">
+      <h3>Platform Gelir Trendi (Son 30 Gün)</h3>
+      <div class="chart-wrap"><canvas #revenueCanvas></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Kullanıcı Rol Dağılımı</h3>
+      <div class="chart-wrap"><canvas #roleCanvas></canvas></div>
+    </div>
+  </div>
+
+  <!-- Store Comparison + Audit Logs -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>En Çok Gelir Getiren Mağazalar</h3>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Mağaza</th><th>Gelir</th><th>Sipariş</th><th>Ürün</th></tr>
+          </thead>
+          <tbody>
+            @for (store of storeComparison(); track store.sellerId) {
+              <tr>
+                <td>{{ store.sellerName }}</td>
+                <td class="mono">₺{{ store.revenue | number:'1.0-0' }}</td>
+                <td class="mono">{{ store.orderCount }}</td>
+                <td class="mono">{{ store.productCount }}</td>
+              </tr>
+            }
+            @if (storeComparison().length === 0) {
+              <tr><td colspan="4" class="text-muted text-center">Henüz veri yok</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-card table-card">
+      <h3>Son İşlem Logları</h3>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr><th>Zaman</th><th>Kullanıcı</th><th>İşlem</th><th>Tür</th></tr>
+          </thead>
+          <tbody>
+            @for (log of auditLogs(); track log.id) {
+              <tr>
+                <td class="mono text-sm">{{ log.timestamp }}</td>
+                <td class="text-sm">{{ log.userEmail }}</td>
+                <td class="text-sm">
+                  {{ getLogAction(log.action) }}
+                  @if (log.isAiAction) { <span class="badge-ai">AI</span> }
+                </td>
+                <td class="text-sm text-muted">{{ log.entityType }}</td>
+              </tr>
+            }
+            @if (auditLogs().length === 0) {
+              <tr><td colspan="4" class="text-muted text-center">Henüz log yok</td></tr>
+            }
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -53,17 +118,9 @@
 <div class="quick-actions">
   <h3>Hızlı İşlemler</h3>
   <div class="action-cards">
-    <a class="action-card" routerLink="/admin/products">
-      <span>📦</span> Ürün Ekle
-    </a>
-    <a class="action-card" routerLink="/admin/orders">
-      <span>🛒</span> Siparişleri Yönet
-    </a>
-    <a class="action-card" routerLink="/admin/users">
-      <span>👥</span> Kullanıcıları Gör
-    </a>
-    <a class="action-card" routerLink="/admin/coupons">
-      <span>🎫</span> Kupon Oluştur
-    </a>
+    <a class="action-card" routerLink="/admin/products"><span>📦</span> Ürün Ekle</a>
+    <a class="action-card" routerLink="/admin/orders"><span>🛒</span> Siparişleri Yönet</a>
+    <a class="action-card" routerLink="/admin/users"><span>👥</span> Kullanıcıları Gör</a>
+    <a class="action-card" routerLink="/admin/coupons"><span>🎫</span> Kupon Oluştur</a>
   </div>
 </div>

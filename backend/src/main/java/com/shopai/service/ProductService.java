@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,8 +83,8 @@ public class ProductService {
         }
         // =======================================================
 
-        org.springframework.data.domain.Sort sort = org.springframework.data.domain.Sort.by(
-                "asc".equalsIgnoreCase(filter.getSortDir()) ? org.springframework.data.domain.Sort.Direction.ASC : org.springframework.data.domain.Sort.Direction.DESC,
+        Sort sort = Sort.by(
+                "asc".equalsIgnoreCase(filter.getSortDir()) ? Sort.Direction.ASC : Sort.Direction.DESC,
                 filter.getSortBy() != null ? filter.getSortBy() : "createdAt"
         );
 
@@ -140,6 +141,12 @@ public class ProductService {
         // Fallback: MySQL LIKE araması
         return productRepository.searchByKeyword(q.trim(), pageable)
                 .map(ProductSummaryResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ProductSummaryResponse> getAllProductsForAdmin(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        return productRepository.findAll(pageable).map(ProductSummaryResponse::from);
     }
 
     // ─── Ürün Detayı ────────────────────────────────────────────────────────

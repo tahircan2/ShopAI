@@ -75,9 +75,7 @@ public class AgentResponses {
                     .feedbackScore(entity.getFeedbackScore())
                     .createdAt(entity.getCreatedAt())
                     .updatedAt(entity.getUpdatedAt())
-                    .steps(entity.getSteps() != null ? entity.getSteps().stream()
-                            .map(TransactionStepResponse::fromEntity)
-                            .toList() : null)
+                    .steps(null) // Adımlar lazy load edildiği için N+1 veya LazyInitException yapmamak adına listede getirilmez.
                     .build();
         }
     }

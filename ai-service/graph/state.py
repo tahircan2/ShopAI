@@ -90,3 +90,17 @@ class AgentState(TypedDict):
 
     # Ön doğrulama sonucu
     pre_validation_result: Optional[dict]
+
+    # ── Text2SQL & Analytics Pipeline ──
+
+    # LLM tarafından üretilen SQL sorgusu (sanitize edilmiş)
+    generated_sql: Optional[str]
+
+    # SQL sorgu sonuçları (dict listesi)
+    sql_results: Optional[list[dict]]
+
+    # Analiz özet metni
+    analysis_text: Optional[str]
+
+    # Grafik yapılandırması (Chart.js / Plotly config)
+    chart_config: Optional[dict]

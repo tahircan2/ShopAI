@@ -46,7 +46,7 @@ async def get_user_orders(
     if not user_id:
         return {"error": "Sipariş geçmişi için giriş yapmanız gerekiyor."}
 
-    if user_role == "ROLE_ADMIN":
+    if user_role in ("ROLE_ADMIN", "ADMIN"):
         url = f"{settings.spring_boot_base_url}/orders/admin"
     else:
         url = f"{settings.spring_boot_base_url}/users/me/orders"
@@ -93,7 +93,7 @@ async def get_order_detail(
     if not user_id:
         return {"error": "Sipariş detayı için giriş yapmanız gerekiyor."}
 
-    if user_role == "ROLE_ADMIN":
+    if user_role in ("ROLE_ADMIN", "ADMIN"):
         # Adminler tüm siparişlerin detayına erişebilir. OrderController/OrderService backend tarafında desteklemiyorsa 
         # şimdilik /orders/{orderNumber} çağrılır, backend güncellenecektir.
         url = f"{settings.spring_boot_base_url}/orders/{order_number}?isAdmin=true"
@@ -139,4 +139,10 @@ async def get_latest_order(user_id: str, user_role: str = "") -> dict:
     if not content:
         return {"message": "Henüz hiç sipariş vermediniz."}
 
+    order_number = content[0].get("orderNumber")
+    if order_number:
+        detail_result = await get_order_detail.ainvoke({"user_id": user_id, "order_number": order_number, "user_role": user_role})
+        if "error" not in detail_result:
+            return detail_result
+            
     return content[0]

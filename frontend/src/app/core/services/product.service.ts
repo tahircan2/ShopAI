@@ -41,6 +41,10 @@ export class ProductService {
     return this.http.get<ProductPage>(`${this.api}/search`, { params: { q, page, size } });
   }
 
+  getAdminProducts(page = 0, size = 20): Observable<ProductPage> {
+    return this.http.get<ProductPage>(`${environment.apiUrl}/admin/products`, { params: { page, size } });
+  }
+
   getReviews(productId: number, page = 0): Observable<{ content: Review[]; totalElements: number }> {
     return this.http.get<{ content: Review[]; totalElements: number }>(`${this.api}/${productId}/reviews`, { params: { page } });
   }

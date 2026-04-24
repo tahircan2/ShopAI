@@ -97,6 +97,21 @@
             </svg>
             Favorilerim
           </a>
+          <a routerLink="/dashboard" class="dropdown-item" (click)="userMenuOpen.set(false)">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            Panelim
+          </a>
+          <a routerLink="/ai-chat" class="dropdown-item ai-chat-link" (click)="userMenuOpen.set(false)">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            AI Asistan <span class="ai-dot"></span>
+          </a>
           @if (auth.isSeller()) {
           <a routerLink="/seller" class="dropdown-item seller" (click)="userMenuOpen.set(false)">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
@@ -169,6 +184,8 @@
     <a routerLink="/profile" (click)="mobileOpen.set(false)">Profilim</a>
     <a routerLink="/orders" (click)="mobileOpen.set(false)">Siparişlerim</a>
     <a routerLink="/wishlist" (click)="mobileOpen.set(false)">Favorilerim</a>
+    <a routerLink="/dashboard" (click)="mobileOpen.set(false)">Panelim</a>
+    <a routerLink="/ai-chat" (click)="mobileOpen.set(false)" class="ai-mobile-link">🤖 AI Asistan</a>
     @if (auth.isSeller()) { <a routerLink="/seller" (click)="mobileOpen.set(false)">Satıcı Paneli</a> }
     @if (auth.isAdmin()) { <a routerLink="/admin" (click)="mobileOpen.set(false)">Admin Paneli</a> }
     <button (click)="logout(); mobileOpen.set(false)">Çıkış Yap</button>

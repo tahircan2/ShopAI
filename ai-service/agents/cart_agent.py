@@ -106,8 +106,8 @@ async def cart_agent_node(state: AgentState) -> AgentState:
                        session_id=state.get("session_id"))
         return {
             **state,
-            "final_response": "Sepet işlemleri için giriş yapmanız gerekiyor. "
-                              "Sağ üstten giriş yapabilirsiniz.",
+            "final_response": "Sepet işlemlerinizi gerçekleştirebilmemiz için lütfen önce hesabınıza giriş yapınız. "
+                               "Sağ üst köşedeki giriş panelini kullanabilirsiniz.",
             "agent_type": "cart_agent",
             "action_type": "INFO",
         }
@@ -137,7 +137,7 @@ async def cart_agent_node(state: AgentState) -> AgentState:
         if not items:
             return {
                 **state,
-                "final_response": "Sepetiniz şu an boş. Ürünlere göz atmak ister misiniz?",
+                "final_response": "Sepetiniz şu an boş görünüyor. Sizin için seçtiğimiz özel ürünlere göz atmak ister misiniz?",
                 "agent_type": "cart_agent",
                 "action_type": "CART_UPDATED",
                 "action_data": cart,
@@ -147,7 +147,7 @@ async def cart_agent_node(state: AgentState) -> AgentState:
         count = len(items)
         return {
             **state,
-            "final_response": f"Sepetinizde {count} ürün var. Toplam tutar: {total} TL.",
+            "final_response": f"Sepetinizde güncel olarak **{count}** adet ürün bulunmaktadır. Toplam tutarınız: **{total} TL**.",
             "agent_type": "cart_agent",
             "action_type": "CART_UPDATED",
             "action_data": cart,
@@ -162,8 +162,8 @@ async def cart_agent_node(state: AgentState) -> AgentState:
         if not product_query:
             return {
                 **state,
-                "final_response": "Hangi ürünü eklemek istediğinizi belirtin. "
-                                  "Örnek: 'Nike ayakkabıyı sepetime ekle'",
+                "final_response": "Lütfen sepetinize eklemek istediğiniz ürünü belirtiniz. "
+                                  "Örneğin: 'Nike spor ayakkabıyı sepetime ekle'",
                 "agent_type": "cart_agent",
                 "action_type": "INFO",
             }
@@ -185,8 +185,8 @@ async def cart_agent_node(state: AgentState) -> AgentState:
         if not product:
             return {
                 **state,
-                "final_response": f"'{product_query}' araması için ürün bulunamadı. "
-                                  "Farklı bir arama terimi deneyin.",
+                "final_response": f"Üzgünüm, '{product_query}' araması için uygun bir ürün bulamadım. "
+                                  "Lütfen farklı bir anahtar kelime ile tekrar deneyiniz.",
                 "agent_type": "cart_agent",
                 "action_type": "INFO",
             }
@@ -212,7 +212,7 @@ async def cart_agent_node(state: AgentState) -> AgentState:
         price = product.get("discountedPrice") or product.get("price", 0)
         return {
             **state,
-            "final_response": f"✓ '{product_name}' ({price} TL) sepetinize eklendi!",
+            "final_response": f"✨ **{product_name}** ({price} TL) başarıyla sepetinize eklendi. Alışverişinize keyifle devam edebilirsiniz!",
             "agent_type": "cart_agent",
             "action_type": "CART_UPDATED",
             "action_data": cart,
@@ -232,7 +232,7 @@ async def cart_agent_node(state: AgentState) -> AgentState:
 
         return {
             **state,
-            "final_response": "Sepetiniz temizlendi.",
+            "final_response": "Sepetiniz tamamen temizlenmiştir. Yeni seçimleriniz için hazırız! ✨",
             "agent_type": "cart_agent",
             "action_type": "CART_UPDATED",
             "action_data": {"items": [], "total": 0},

@@ -126,8 +126,8 @@ async def checkout_agent_node(state: AgentState) -> AgentState:
     if not user_id or str(user_id).strip() == "":
         return {
             **state,
-            "final_response": "Satın alma işlemi için giriş yapmanız gerekiyor. "
-                              "Sağ üstten giriş yapabilirsiniz.",
+            "final_response": "Satın alma işlemlerinizi güvenli bir şekilde gerçekleştirebilmemiz için lütfen önce hesabınıza giriş yapınız. "
+                               "Giriş yaptıktan sonra sipariş planınızı oluşturabilirim.",
             "agent_type": "checkout_agent",
             "action_type": "INFO",
         }
@@ -173,8 +173,8 @@ async def checkout_agent_node(state: AgentState) -> AgentState:
     if not items:
         return {
             **state,
-            "final_response": "Sepetiniz boş! Önce ürün ekleyerek başlayın. "
-                              "Örneğin: 'Nike ayakkabı sepetime ekle'",
+            "final_response": "Sepetiniz şu an boş görünüyor. Sipariş oluşturabilmemiz için lütfen önce sepetinize en az bir ürün ekleyiniz. "
+                               "Sizin için bir ürün araması yapmamı ister misiniz?",
             "agent_type": "checkout_agent",
             "action_type": "INFO",
         }
@@ -222,9 +222,9 @@ async def checkout_agent_node(state: AgentState) -> AgentState:
         return {
             **state,
             "final_response": (
-                f"Sepetinizde {item_count} ürün var (toplam {cart_total} TL). "
-                "Ancak kayıtlı teslimat adresiniz yok. "
-                "Lütfen önce profil sayfanızdan bir adres ekleyin, sonra tekrar deneyin."
+                f"Sepetinizde **{item_count}** ürün bulunuyor (toplam **{cart_total} TL**). "
+                "Ancak teslimat adresiniz tanımlanmamış görünüyor. "
+                "İşleme devam edebilmemiz için lütfen profil sayfanızdan bir adres ekleyiniz."
             ),
             "agent_type": "checkout_agent",
             "action_type": "INFO",
@@ -275,8 +275,8 @@ async def checkout_agent_node(state: AgentState) -> AgentState:
     return {
         **state,
         "final_response": (
-            f"Sepetinizdeki {item_count} ürün için {cart_total} TL tutarında sipariş "
-            f"oluşturmak üzere bir plan hazırladım. Lütfen aşağıdaki detayları inceleyip onaylayın."
+            f"Sepetinizdeki **{item_count}** adet ürün için toplam **{cart_total} TL** tutarında bir sipariş planı hazırladım. "
+            "Güvenli alışveriş deneyiminiz için lütfen aşağıdaki detayları inceleyerek onay veriniz."
         ),
         "agent_type": "checkout_agent",
         "action_type": "APPROVAL_REQUIRED",

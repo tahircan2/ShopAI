@@ -53,6 +53,15 @@ public class AiController {
         return aiService.chatStream(req, userId, userRole, ip, request);
     }
 
+    @GetMapping("/conversations")
+    @Operation(summary = "Kullanıcının tüm konuşmalarını listele")
+    public ResponseEntity<java.util.List<java.util.Map<String, Object>>> getConversations(@AuthenticationPrincipal JwtAuthDetails auth) {
+        if (auth == null) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok(aiService.listConversations(auth.getUserId()));
+    }
+
     @GetMapping("/conversation/{sessionId}")
     @Operation(summary = "Konuşma geçmişini getir")
     public ResponseEntity<Map<String, Object>> getConversation(@AuthenticationPrincipal JwtAuthDetails auth,

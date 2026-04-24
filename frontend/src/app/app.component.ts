@@ -1,5 +1,6 @@
-import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { Component, inject, signal, computed } from '@angular/core';
+import { RouterOutlet, Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs';
 import { AuthService } from './core/services/auth.service';
 import { NavbarComponent } from './shared/components/navbar/navbar.component';
 import { FooterComponent } from './shared/components/footer/footer.component';
@@ -24,20 +25,40 @@ import { AgentNotificationBannerComponent } from './shared/components/agent-noti
   ],
   template: `
     <app-loading-bar />
-    <app-navbar />
-    <main class="page-content">
+    @if (!isAiChat()) {
+      <app-navbar />
+    }
+    <main class="page-content" [class.no-padding]="isAiChat()">
       <router-outlet />
     </main>
-    <app-footer />
+    @if (!isAiChat()) {
+      <app-footer />
+      <app-chatbot />
+    }
     <app-toast />
-    <app-chatbot />
     @if (authService.sessionExpired()) {
       <app-session-expired />
     }
     <app-agent-notification-banner />
   `,
-  styles: [`:host { display: flex; flex-direction: column; min-height: 100vh; } .page-content { flex: 1; padding-top: 64px; }`]
+  styles: [`
+    :host { display: flex; flex-direction: column; min-height: 100vh; } 
+    .page-content { flex: 1; padding-top: 64px; }
+    .page-content.no-padding { padding-top: 0; }
+  `]
 })
 export class AppComponent {
   readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  readonly currentUrl = signal<string>('');
+  readonly isAiChat = computed(() => this.currentUrl().includes('/ai-chat'));
+
+  constructor() {
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd)
+    ).subscribe((event: any) => {
+      this.currentUrl.set(event.urlAfterRedirects);
+    });
+  }
 }

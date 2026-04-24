@@ -37,17 +37,6 @@
 
       <!-- Messages -->
       <div class="chat-messages" #msgContainer>
-        @if (!aiOnboarded()) {
-          <div class="welcome-msg ai-onboarding">
-            <div class="welcome-icon">👋</div>
-            <div class="welcome-text">
-              <h2>Aramıza Hoşgeldiniz!</h2>
-              <p>Ben ShopAI Asistan. Alışveriş asistanınız olarak <strong>ürün bulabilir</strong>, <strong>öneri verebilir</strong> ve hatta onayınız ile <strong>sizin yerinize işlemler yapabilirim</strong>.</p>
-              <p>Denemeye hazır mısınız?</p>
-            </div>
-            <button class="btn btn-primary" style="margin-top: 10px;" (click)="completeOnboarding()">Başlayalım</button>
-          </div>
-        } @else {
           @if (aiChat.messages().length === 0) {
             <div class="welcome-msg">
               <div class="welcome-icon">🤖</div>
@@ -68,11 +57,11 @@
               <div class="bot-avatar">AI</div>
             }
             <div class="msg-content-wrapper">
-              <div class="msg-bubble" [class.injection-warn]="msg.isInjectionDetected">
+              <div class="msg-bubble markdown-body" [class.injection-warn]="msg.isInjectionDetected">
                 @if (msg.isInjectionDetected) {
                   <div class="warn-badge">⚠️ Güvenlik uyarısı</div>
                 }
-                {{ msg.content }}
+                <div [innerHTML]="msg.content | markdown"></div>
               </div>
               @if (msg.actionType === 'PRODUCT_LIST' && getTop3Products(msg.actionData).length > 0) {
                 <div class="chat-products">
@@ -90,6 +79,20 @@
                       <i class="bi bi-grid-3x3-gap"></i>
                       Tümünü Göster
                     </button>
+                  }
+                </div>
+              }
+              
+              @if (msg.actionType === 'ORDER_INFO' && msg.actionData?.order?.items?.length > 0) {
+                <div class="chat-products">
+                  @for (item of msg.actionData.order.items; track item.id) {
+                    <div class="chat-product-card" style="cursor: default">
+                      <img [src]="item.primaryImageUrl || 'assets/images/placeholder.png'" [alt]="item.productName" class="cp-img">
+                      <div class="cp-info">
+                        <div class="cp-name">{{ item.productName }}</div>
+                        <div class="cp-price">{{ item.unitPrice | currencyFormat }} ({{ item.quantity }} Adet)</div>
+                      </div>
+                    </div>
                   }
                 </div>
               }
@@ -132,7 +135,7 @@
             </div>
           </div>
         }
-        }
+
       </div>
 
       <!-- Input -->

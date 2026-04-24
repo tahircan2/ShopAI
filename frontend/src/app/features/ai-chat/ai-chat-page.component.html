@@ -1,0 +1,245 @@
+<div class="ai-chat-container">
+  <!-- Sidebar -->
+  <aside class="chat-sidebar" [class.open]="sidebarOpen">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="logo-orb"></div>
+        <h1>ShopAI <span>Asistan</span></h1>
+      </div>
+      <button class="new-chat-btn" (click)="newChat()">
+        <span>+</span> Yeni Sohbet
+      </button>
+    </div>
+
+    <div class="sidebar-content">
+      <div class="section-label">Geçmiş Sohbetler</div>
+      <div class="session-list" [class.scrollable]="showAllSessions">
+        @if (aiChat.loadingHistory()) {
+          @for (i of [1,2,3]; track i) {
+            <div class="skeleton" style="height: 48px; margin-bottom: 8px;"></div>
+          }
+        } @else {
+          @for (s of displayedSessions; track s.sessionId) {
+            <button 
+              class="session-item" 
+              [class.active]="aiChat.sessionId() === s.sessionId"
+              (click)="switchSession(s.sessionId)">
+              <span class="sess-icon">💬</span>
+              <div class="sess-info">
+                <span class="sess-name">{{ s.lastMessageAt | date:'dd.MM HH:mm' }}</span>
+                <span class="sess-meta">{{ s.messageCount }} mesaj</span>
+              </div>
+            </button>
+          } @empty {
+            <div class="text-dim text-xs p-2">Geçmiş bulunamadı</div>
+          }
+
+          @if (aiChat.conversations().length > 3) {
+            <button class="show-more-sessions" (click)="showAllSessions = !showAllSessions">
+              {{ showAllSessions ? 'Daha Az Göster' : 'Tümünü Göster (' + aiChat.conversations().length + ')' }}
+            </button>
+          }
+        }
+      </div>
+
+      <div class="section-label">Hızlı Sorular</div>
+      <div class="quick-links">
+        @for (q of quickQuestions; track q) {
+          <button class="quick-link" (click)="sendQuick(q)">{{ q }}</button>
+        }
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="capabilities">
+        <span class="cap-tag">Ürünler</span>
+        <span class="cap-tag">Siparişler</span>
+        <span class="cap-tag">Analiz</span>
+      </div>
+      <button class="danger-btn" (click)="clearChat()">🗑️ Geçmişi Temizle</button>
+    </div>
+  </aside>
+
+  <!-- Main Chat -->
+  <main class="chat-viewport">
+    <header class="chat-header">
+      <button class="mobile-toggle" (click)="sidebarOpen = !sidebarOpen">
+        <span class="sess-icon">☰</span>
+      </button>
+      <div class="status-indicator">
+        <span class="dot" [class.online]="!aiChat.isTyping()"></span>
+        {{ aiChat.isTyping() ? 'ShopAI yazıyor...' : 'Çevrimiçi' }}
+      </div>
+      <div class="header-actions">
+        <button class="home-link-btn" routerLink="/">
+          <span class="icon">🏠</span>
+          <span>Mağazaya Dön</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="messages-container" #chatContainer>
+      @if (aiChat.messages().length === 0 && !aiChat.loadingHistory()) {
+        <div class="hero-screen fade-in">
+          <h2>Nasıl yardımcı olabilirim?</h2>
+          <p>Alışveriş asistanınız olarak ürünleri bulmanıza, sepetinizi yönetmenize ve verileri analiz etmenize yardımcı olabilirim.</p>
+          
+          <div class="feature-grid">
+            <div class="feature-card" (click)="sendQuick('En popüler telefonlar')">
+              <span class="f-icon">📱</span>
+              <h3>Trendler</h3>
+              <p>Popüler ürünleri keşfedin</p>
+            </div>
+            <div class="feature-card" (click)="sendQuick('Sepetimde ne var?')">
+              <span class="f-icon">🛒</span>
+              <h3>Sepetim</h3>
+              <p>Eklediklerinizi görün</p>
+            </div>
+            <div class="feature-card" (click)="sendQuick('Siparişlerimi listele')">
+              <span class="f-icon">📦</span>
+              <h3>Siparişler</h3>
+              <p>Son işlemlerinizi takip edin</p>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (aiChat.loadingHistory()) {
+        <div class="history-loading">
+          <span class="spinner"></span>
+          Geçmiş yükleniyor...
+        </div>
+      }
+
+      @for (msg of aiChat.messages(); track msg.id) {
+        <div class="msg-wrapper" [class.user]="msg.role === 'user'" [class.bot]="msg.role === 'assistant'">
+          <div class="msg-content fade-in">
+            <div class="msg-bubble" [class.injection-warn]="msg.isInjectionDetected">
+              @if (msg.isInjectionDetected) {
+                <div class="security-badge">🛡️ Güvenlik Koruması</div>
+              }
+              <div class="text markdown-body" [innerHTML]="msg.content | markdown"></div>
+            </div>
+
+            <!-- Action Results -->
+            @if (msg.actionType === 'PRODUCT_LIST' && getTop3Products(msg.actionData).length > 0) {
+              <div class="action-results">
+                @for (prod of getTop3Products(msg.actionData); track prod.id) {
+                  <div class="modern-card product" (click)="goToProductDetail(prod.slug)">
+                    <img [src]="prod.primaryImageUrl || 'assets/images/placeholder.png'" [alt]="prod.name">
+                    <div class="details">
+                      <span class="name">{{ prod.name }}</span>
+                      <span class="price">{{ prod.discountedPrice || prod.price | currencyFormat }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (msg.actionType === 'ORDER_INFO' && msg.actionData?.order?.items?.length > 0) {
+              <div class="action-results">
+                @for (item of msg.actionData.order.items; track item.id) {
+                  <div class="modern-card">
+                    <img [src]="item.primaryImageUrl || 'assets/images/placeholder.png'" [alt]="item.productName">
+                    <div class="details">
+                      <span class="name">{{ item.productName }}</span>
+                      <span class="meta">{{ item.unitPrice | currencyFormat }} × {{ item.quantity }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (msg.actionType === 'APPROVAL_REQUIRED' && msg.actionData?.approvalToken) {
+              <div class="mt-2" style="max-width: 400px;">
+                <app-agent-approval-card
+                  [approvalToken]="msg.actionData.approvalToken"
+                  (actionCompleted)="onApprovalCompleted('' + msg.id, $event)">
+                </app-agent-approval-card>
+              </div>
+            }
+
+            @if (msg.actionType === 'STEP_PROGRESS' && msg.actionData?.transactionId) {
+              <div class="mt-2" style="max-width: 400px;">
+                <app-agent-progress
+                  [transactionId]="msg.actionData.transactionId"
+                  (progressComplete)="onProgressComplete(msg, $event)">
+                </app-agent-progress>
+              </div>
+            }
+
+            @if (msg.actionType === 'ANALYTICS_RESULT' && msg.actionData?.chartConfig) {
+              <div class="analytics-modern mt-2" [attr.data-rendered]="onAnalyticsRendered(msg)">
+                <div class="a-header">
+                  <span>📊 {{ msg.actionData.rowCount }} Sonuç</span>
+                </div>
+                <div class="a-chart">
+                  <canvas [id]="'analytics-chart-' + msg.id"></canvas>
+                </div>
+              </div>
+            }
+
+            @if (msg.actionType === 'ANALYTICS_RESULT' && msg.actionData?.results && !msg.actionData?.chartConfig) {
+              <div class="mt-2">
+                <app-chat-data-table [data]="msg.actionData.results"></app-chat-data-table>
+              </div>
+            }
+
+            @if (msg['feedbackRequested']) {
+              <div class="feedback-toast mt-2">
+                <span>Yardımcı oldu mu?</span>
+                <div class="btns">
+                  <button (click)="submitFeedback(msg, 5)">Evet</button>
+                  <button (click)="submitFeedback(msg, 1)">Hayır</button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      @if (aiChat.isTyping()) {
+        <div class="msg-wrapper bot">
+          <div class="typing-indicator">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      }
+    </div>
+
+    <footer class="chat-footer">
+      <div class="input-container">
+        <div class="input-box">
+          <input
+            type="text"
+            [(ngModel)]="inputText"
+            (keydown.enter)="send()"
+            placeholder="Mesajınızı buraya yazın..."
+            [disabled]="aiChat.isTyping() || aiChat.loadingHistory()"
+          />
+          <button class="send-trigger" (click)="send()" [disabled]="!inputText.trim() || aiChat.isTyping()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="compliance-hint">ShopAI hata yapabilir. Bilgileri teyit etmeyi unutmayın.</div>
+    </footer>
+  </main>
+</div>
+
+<!-- Custom Confirmation Modal -->
+<div class="custom-modal-overlay" *ngIf="showConfirmModal">
+  <div class="custom-modal">
+    <div class="modal-icon">
+      <i class="fas fa-trash-alt"></i>
+    </div>
+    <h3>Sohbeti Temizle</h3>
+    <p>Tüm sohbet geçmişinizi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+    <div class="modal-actions">
+      <button class="btn-cancel" (click)="cancelClearChat()">Vazgeç</button>
+      <button class="btn-confirm" (click)="confirmClearChat()">Temizle</button>
+    </div>
+  </div>
+</div>

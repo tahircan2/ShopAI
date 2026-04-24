@@ -1,4 +1,4 @@
-import { Component, inject, signal, ElementRef, ViewChild, AfterViewChecked, OnInit } from '@angular/core';
+import { Component, inject, signal, ElementRef, ViewChild, AfterViewChecked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AiChatService } from '../../../core/services/ai-chat.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -10,11 +10,12 @@ import { AgentApprovalCardComponent } from '../agent-approval-card/agent-approva
 import { AgentProgressComponent } from '../agent-progress/agent-progress.component';
 import { AgentBridgeService } from '../../../services/agent-bridge.service';
 import { CurrencyFormatPipe } from '../../pipes/shared-pipes';
+import { MarkdownPipe } from '../../pipes/markdown.pipe';
 
 @Component({
   selector: 'app-chatbot',
   standalone: true,
-  imports: [FormsModule, AgentApprovalCardComponent, AgentProgressComponent, CurrencyFormatPipe],
+  imports: [FormsModule, AgentApprovalCardComponent, AgentProgressComponent, CurrencyFormatPipe, MarkdownPipe],
   templateUrl: './chatbot.component.html',
   styleUrl: './chatbot.component.scss'
 })
@@ -30,7 +31,6 @@ export class ChatbotComponent implements AfterViewChecked {
 
   readonly environment = environment;
   readonly open = signal(false);
-  aiOnboarded = signal(true);
   inputText = '';
   private lastMsgCount = 0;
 
@@ -42,19 +42,6 @@ export class ChatbotComponent implements AfterViewChecked {
     '📦 Siparişim nerede?',
     '🔄 İade politikası nedir?'
   ];
-
-  ngOnInit() {
-    const onboarded = localStorage.getItem('ai_onboarded');
-    if (!onboarded) {
-      this.aiOnboarded.set(false);
-    }
-  }
-
-  completeOnboarding() {
-    localStorage.setItem('ai_onboarded', 'true');
-    this.aiOnboarded.set(true);
-    this.sendQuick('Merhaba, neler yapabilirsin?');
-  }
 
   reportBug() {
     const history = this.aiChat.messages().slice(-5);

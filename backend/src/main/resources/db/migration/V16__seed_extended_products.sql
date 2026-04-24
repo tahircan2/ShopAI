@@ -86,7 +86,7 @@ INSERT INTO product_images
   (product_id, image_url, alt_text, is_primary, sort_order)
 VALUES
 (35, 'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?w=800&h=600&fit=crop', 'Samsung Galaxy S24 Ultra', TRUE, 1),
-(36, 'https://images.unsplash.com/photo-1695048133142-1a20484429be?w=800&h=600&fit=crop', 'Apple iPhone 15 Pro', TRUE, 1),
+(36, '/iphone15pro.png', 'Apple iPhone 15 Pro', TRUE, 1),
 (37, 'https://images.unsplash.com/photo-1574944985070-8f3ebc6b79d2?w=800&h=600&fit=crop', 'Xiaomi 14 Pro', TRUE, 1),
 (38, 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=800&h=600&fit=crop', 'Google Pixel 8 Pro', TRUE, 1),
 (39, 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&h=600&fit=crop', 'OnePlus 12', TRUE, 1),
