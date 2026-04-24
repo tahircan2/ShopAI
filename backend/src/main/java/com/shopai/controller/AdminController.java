@@ -7,9 +7,7 @@ import com.shopai.dto.response.ProductResponses.*;
 import com.shopai.dto.response.AuthResponses.UserInfo;
 
 import com.shopai.entity.ProductImage;
-import com.shopai.entity.User;
 import com.shopai.repository.ProductRepository;
-import com.shopai.repository.UserRepository;
 import com.shopai.service.CategoryService;
 import com.shopai.service.CouponService;
 import com.shopai.service.OrderService;
@@ -41,21 +39,11 @@ public class AdminController {
     private final OrderService orderService;
     private final CategoryService categoryService;
     private final CouponService couponService;
-    private final com.shopai.repository.AuditLogRepository auditLogRepository;
 
     @GetMapping("/stats")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Map<String, Object>> getStats() {
         return ResponseEntity.ok(productService.getAdminStats());
-    }
-
-    @GetMapping("/audit-logs")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Page<com.shopai.entity.AuditLog>> getAuditLogs(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(auditLogRepository.findAll(pageable));
     }
 
     @GetMapping("/users")
