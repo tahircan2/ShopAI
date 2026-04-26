@@ -152,8 +152,8 @@ Sadece JSON formatında döndür (başka açıklama yazma). Format:
     "datasets": [{{
       "label": "...",
       "data": [1, 2, 3],
-      "backgroundColor": ["#6366f1", "#22d3ee", "#10b981"],
-      "borderColor": "#6366f1",
+      "backgroundColor": ["#6366f1", "#22d3ee", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#ec4899", "#14b8a6", "#f97316", "#06b6d4"],
+      "borderColor": "#ffffff",
       "borderWidth": 1
     }}]
   }},
@@ -163,11 +163,10 @@ Sadece JSON formatında döndür (başka açıklama yazma). Format:
   }}
 }}
 
-En uygun grafik tipini seç:
-- Zaman serisi → line
-- Karşılaştırma → bar
-- Dağılım → doughnut/pie
-- Sıralama → horizontal bar (indexAxis: 'y')
+GÖREV: En uygun grafik tipini aşağıdaki kurallara göre SEÇ (type alanına yaz):
+1. İçinde "kategori", "kategoriye göre", "puan", "statü", "oran", "dağılım" geçen sorgular veya gruplamalar -> KESİNLİKLE "pie" veya "doughnut" KULLAN.
+2. Zaman serisi (aylar, yıllar, günler, tarihler) -> KESİNLİKLE "line" KULLAN.
+3. Ürün bazlı satış sıralaması, en çok satan ürünler veya ürün karşılaştırmaları -> KESİNLİKLE "bar" KULLAN (Yatay bar istersen options içine indexAxis: 'y' ekle, ama type HER ZAMAN "bar" olsun).
 """
 
 

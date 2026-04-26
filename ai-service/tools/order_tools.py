@@ -17,12 +17,15 @@ logger = structlog.get_logger(__name__)
 _http_client = httpx.AsyncClient(timeout=10.0)
 
 
-def _auth_headers(user_id: str) -> dict:
-    return {
+def _auth_headers(user_id: str, user_role: str = "") -> dict:
+    headers = {
         "X-Internal-Key": settings.spring_boot_internal_key,
         "X-Authenticated-User-Id": str(user_id),
         "Content-Type": "application/json",
     }
+    if user_role:
+        headers["X-Authenticated-User-Role"] = user_role
+    return headers
 
 
 @tool
@@ -57,7 +60,7 @@ async def get_user_orders(
         response = await _http_client.get(
             url,
             params=params,
-            headers=_auth_headers(user_id),
+            headers=_auth_headers(user_id, user_role),
         )
         response.raise_for_status()
         logger.info("orders_fetch_success", user_id=user_id)
@@ -101,7 +104,7 @@ async def get_order_detail(
         url = f"{settings.spring_boot_base_url}/orders/{order_number}"
 
     try:
-        response = await _http_client.get(url, headers=_auth_headers(user_id))
+        response = await _http_client.get(url, headers=_auth_headers(user_id, user_role))
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:

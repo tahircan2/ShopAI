@@ -65,6 +65,8 @@ export interface Product {
   isActive: boolean;
   metaTitle?: string;
   metaDescription?: string;
+  sellerId?: number;
+  sellerName?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -174,6 +176,7 @@ export interface OrderItem {
   productId: number;
   productName: string;
   productSku?: string;
+  sellerName?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

@@ -48,6 +48,13 @@ public class UserService {
         user.setLastName(req.getLastName().trim());
         user.setPhone(req.getPhone());
         
+        if (req.getShopName() != null) {
+            user.setShopName(req.getShopName().trim());
+        }
+        if (req.getShopDescription() != null) {
+            user.setShopDescription(req.getShopDescription().trim());
+        }
+        
         User saved = userRepository.save(user);
         auditLogService.logEntityAction(userId, "USER_PROFILE_UPDATE", oldUser, saved, "User", userId, request);
         

@@ -46,6 +46,12 @@ public class User {
     @Column(length = 20)
     private String phone;
 
+    @Column(name = "shop_name", length = 100)
+    private String shopName;
+
+    @Column(name = "shop_description", columnDefinition = "TEXT")
+    private String shopDescription;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, columnDefinition = "ENUM('USER','SELLER','ADMIN') DEFAULT 'USER'")
     @Builder.Default

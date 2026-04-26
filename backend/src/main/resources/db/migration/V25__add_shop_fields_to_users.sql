@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN shop_name VARCHAR(100) NULL;
+ALTER TABLE users ADD COLUMN shop_description TEXT NULL;

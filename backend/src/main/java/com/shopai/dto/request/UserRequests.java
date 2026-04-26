@@ -18,6 +18,12 @@ public class UserRequests {
 
         @Size(max = 20)
         private String phone;
+
+        @Size(max = 100)
+        private String shopName;
+
+        @Size(max = 500)
+        private String shopDescription;
     }
 
     @Data

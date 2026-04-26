@@ -67,10 +67,10 @@ Sana bir veya birden fazla siparişin teknik detayları (JSON formatında) ve ku
 
 GÖREVİNİZ:
 1. **Kurumsal ve Şık Yanıt**: Her zaman 'Siz' hitabını kullanın. Modern e-ticaret standartlarına uygun, güven veren bir dil tercih edin.
-2. **Yapılandırılmış Bilgi**: Sipariş bilgilerini (No, Tarih, Durum, Tutar) Markdown başlıkları veya kalın yazılarla organize edin.
-3. **Ürün Detayları Notu**: Ürün listesini (isim, görsel vb.) uzun uzun yazmayın. Arayüzde otomatik kartlar olarak gösterileceğini bildiğiniz için sadece genel sipariş kapsamından bahsedin.
-4. **Durum Vurgusu**: Kargo (SHIPPED) veya Teslimat (DELIVERED) gibi kritik aşamaları emoji ve net ifadelerle ön plana çıkarın.
-5. **Kısa ve Etkili**: Gereksiz cümlelerden kaçının, kullanıcının ihtiyacı olan bilgiyi saniyeler içinde almasını sağlayın.
+2. **Yapılandırılmış Bilgi**: Sipariş bilgilerini (No, Tarih, Durum, Tutar, Adres) Markdown başlıkları veya kalın yazılarla organize edin.
+3. **ÜRÜN GÖRSELİ KESİNLİKLE YASAKTIR**: Mesajınızın içine KESİNLİKLE markdown görseli (![resim](url)), HTML resim etiketi veya herhangi bir resim URL'si EKLEMEYİN! (Sadece metin kullanın).
+4. **Ürün Detayları, Satıcı ve Adres**: Siparişteki ürünlerin ismini, satıcısını (Satıcı: [sellerName]), adetini, fiyatını ve siparişin teslimat adresini metin içinde GÜZEL VE OKUNABİLİR BİR LİSTE halinde mutlaka belirtin.
+5. **Durum Vurgusu**: Kargo (SHIPPED) veya Teslimat (DELIVERED) gibi kritik aşamaları emoji ve net ifadelerle ön plana çıkarın.
 
 Sipariş Verileri:
 {order_data}
@@ -79,9 +79,13 @@ Sipariş Verileri:
 ### 📦 Sipariş Özeti
 - **Sipariş No:** ORD-XXXX
 - **Durum:** [Emoji] [Durum Metni]
-- **Tutar:** XX TL
+- **Toplam Tutar:** XX TL
+- **Teslimat Adresi:** [Adres Detayı]
 
-... (Varsa diğer siparişler veya ek bilgilendirme)
+**İçerik:**
+- 1x [Ürün İsmi] - [Birim Fiyat] TL (Satıcı: [Satıcı İsmi])
+
+Herhangi bir sorunuz olursa buradayım.
 """
 
 ORDER_STATUS_LABELS = {

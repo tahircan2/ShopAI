@@ -125,8 +125,11 @@
             </div>
             <div class="item-info">
               <div class="item-name">{{ item.productName }}</div>
+              <div class="text-xs" style="color: var(--primary); margin-top: 2px;">
+                Satıcı: <strong>{{ item.sellerName || 'ShopAI' }}</strong>
+              </div>
               @if (item.productSku) {
-              <div class="text-xs text-dim">SKU: {{ item.productSku }}</div>
+              <div class="text-xs text-dim" style="margin-top: 2px;">SKU: {{ item.productSku }}</div>
               }
             </div>
             <div class="item-qty text-muted text-sm">x{{ item.quantity }}</div>

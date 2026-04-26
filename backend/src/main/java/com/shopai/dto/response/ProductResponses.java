@@ -33,6 +33,7 @@ public class ProductResponses {
         private List<ProductImageResponse> images;
         private List<ProductVariantResponse> variants;
         private Long sellerId;
+        private String sellerName;
         private LocalDateTime createdAt;
 
         public static ProductResponse from(Product p) {
@@ -57,6 +58,11 @@ public class ProductResponses {
                     .images(p.getImages().stream().map(ProductImageResponse::from).toList())
                     .variants(p.getVariants().stream().map(ProductVariantResponse::from).toList())
                     .sellerId(p.getSeller() != null ? p.getSeller().getId() : null)
+                    .sellerName(p.getSeller() != null ? 
+                            (p.getSeller().getShopName() != null && !p.getSeller().getShopName().isBlank() ? 
+                                    p.getSeller().getShopName() : 
+                                    p.getSeller().getFirstName() + " " + p.getSeller().getLastName()) 
+                            : null)
                     .createdAt(p.getCreatedAt())
                     .build();
         }
@@ -112,7 +118,10 @@ public class ProductResponses {
                     .isActive(p.getIsActive())
                     .primaryImageUrl(primaryImg)
                     .sellerId(p.getSeller() != null ? p.getSeller().getId() : null)
-                    .sellerName(p.getSeller() != null ? p.getSeller().getFirstName() + " " + p.getSeller().getLastName()
+                    .sellerName(p.getSeller() != null ? 
+                            (p.getSeller().getShopName() != null && !p.getSeller().getShopName().isBlank() ? 
+                                    p.getSeller().getShopName() : 
+                                    p.getSeller().getFirstName() + " " + p.getSeller().getLastName()) 
                             : null)
                     .categoryId(p.getCategory() != null ? p.getCategory().getId() : null)
                     .categoryName(p.getCategory() != null ? p.getCategory().getName() : null)

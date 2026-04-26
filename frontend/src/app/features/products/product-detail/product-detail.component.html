@@ -52,6 +52,9 @@
       <span class="brand-tag">{{ product()!.brand }}</span>
       }
       <h1 class="product-title">{{ product()!.name }}</h1>
+      <div class="seller-info" style="margin-bottom: 16px; font-size: 14px; color: var(--text-muted);">
+        Satıcı: <strong>{{ product()!.sellerName || 'ShopAI' }}</strong>
+      </div>
 
       <!-- Rating -->
       <div class="rating-row">

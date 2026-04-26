@@ -41,17 +41,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             @NonNull HttpServletResponse response,
             @NonNull FilterChain filterChain) throws ServletException, IOException {
 
-        // AI servisinden gelen yetkili iç istekleri kontrol et
         String reqInternalKey = request.getHeader("X-Internal-Key");
         if (reqInternalKey != null && reqInternalKey.equals(internalKey)) {
             String userIdStr = request.getHeader("X-Authenticated-User-Id");
             if (userIdStr != null && !userIdStr.isEmpty()) {
                 try {
                     Long userId = Long.parseLong(userIdStr);
-                    // Internal AI servisi okuma işlemleri(sipariş sorgulama vs) için varsayılan
-                    // USER rolü ver
-                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_USER"));
-                    var authDetails = new JwtAuthDetails(userId, "internal@shopai.com", "USER");
+                    
+                    // Internal AI servisi okuma işlemleri(sipariş sorgulama vs) için varsayılan USER rolü ver, ama başlıkta geldiyse onu kullan.
+                    String userRole = request.getHeader("X-Authenticated-User-Role");
+                    if (userRole == null || userRole.isEmpty()) {
+                        userRole = "USER";
+                    }
+                    
+                    // Role_ prefixini temizle
+                    userRole = userRole.replace("ROLE_", "");
+                    
+                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + userRole));
+                    var authDetails = new JwtAuthDetails(userId, "internal@shopai.com", userRole);
                     var authentication = new UsernamePasswordAuthenticationToken(authDetails, null, authorities);
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 

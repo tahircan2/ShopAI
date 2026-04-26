@@ -70,6 +70,8 @@ public class AuthService {
                 .firstName(req.getFirstName().trim())
                 .lastName(req.getLastName().trim())
                 .phone(req.getPhone())
+                .shopName(req.getShopName() != null ? req.getShopName().trim() : null)
+                .shopDescription(req.getShopDescription() != null ? req.getShopDescription().trim() : null)
                 .emailVerifyToken(verifyToken)
                 .build();
 

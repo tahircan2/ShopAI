@@ -36,6 +36,8 @@ public class AuthResponses {
         private Boolean isEmailVerified;
         private Boolean isActive;
         private LocalDateTime createdAt;
+        private String shopName;
+        private String shopDescription;
 
         public static UserInfo from(User user) {
             return UserInfo.builder()
@@ -48,6 +50,8 @@ public class AuthResponses {
                     .isEmailVerified(user.getIsEmailVerified())
                     .isActive(user.getIsActive())
                     .createdAt(user.getCreatedAt())
+                    .shopName(user.getShopName())
+                    .shopDescription(user.getShopDescription())
                     .build();
         }
     }

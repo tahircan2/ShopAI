@@ -91,6 +91,8 @@ public class OrderResponses {
         private Long productId;
         private String productName;
         private String productSku;
+        private Long sellerId;
+        private String sellerName;
         private String description;
         private String color;
         private String size;
@@ -127,6 +129,13 @@ public class OrderResponses {
                     .productId(i.getProduct() != null ? i.getProduct().getId() : null)
                     .productName(i.getProductName())
                     .productSku(i.getProductSku())
+                    .sellerId(i.getProduct() != null && i.getProduct().getSeller() != null 
+                            ? i.getProduct().getSeller().getId() : null)
+                    .sellerName(i.getProduct() != null && i.getProduct().getSeller() != null 
+                            ? (i.getProduct().getSeller().getShopName() != null && !i.getProduct().getSeller().getShopName().isBlank()
+                                ? i.getProduct().getSeller().getShopName()
+                                : i.getProduct().getSeller().getFirstName() + " " + i.getProduct().getSeller().getLastName()) 
+                            : null)
                     .description(i.getProduct() != null ? i.getProduct().getDescription() : null)
                     .color(color)
                     .size(size)
