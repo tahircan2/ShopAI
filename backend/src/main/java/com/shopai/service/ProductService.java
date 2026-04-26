@@ -83,15 +83,10 @@ public class ProductService {
         }
         // =======================================================
 
-        Sort sort = Sort.by(
-                "asc".equalsIgnoreCase(filter.getSortDir()) ? Sort.Direction.ASC : Sort.Direction.DESC,
-                filter.getSortBy() != null ? filter.getSortBy() : "createdAt"
-        );
-
         Pageable pageable = PageRequest.of(
                 filter.getPage() != null ? filter.getPage() : 0,
                 filter.getSize() != null ? Math.min(filter.getSize(), 50) : 20,
-                sort
+                Sort.unsorted()
         );
         return productRepository
                 .findAll(ProductSpecification.withFilter(filter), pageable)
@@ -231,8 +226,7 @@ public class ProductService {
     // ─── Admin: Ürün CRUD ────────────────────────────────────────────────────
     @Transactional
     public ProductResponse createProduct(CreateProductRequest req, Long sellerId, jakarta.servlet.http.HttpServletRequest request) {
-        if (req.getSku() != null && productRepository.findAll().stream()
-                .anyMatch(p -> req.getSku().equals(p.getSku()))) {
+        if (req.getSku() != null && productRepository.existsBySku(req.getSku())) {
             throw new ConflictException("Bu SKU zaten kullanılıyor: " + req.getSku());
         }
 

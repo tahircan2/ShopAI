@@ -53,6 +53,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
            "JOIN oi.product p WHERE p.seller.id = :sellerId AND oi.order.status <> 'CANCELLED' AND oi.order.createdAt >= :date")
     BigDecimal sumRevenueForSellerAfter(@Param("sellerId") Long sellerId, @Param("date") java.time.LocalDateTime date);
 
+    @Query("SELECT DISTINCT oi.order FROM OrderItem oi " +
+           "JOIN oi.product p WHERE p.seller.id = :sellerId " +
+           "ORDER BY oi.order.createdAt DESC")
+    Page<Order> findBySellerId(@Param("sellerId") Long sellerId, Pageable pageable);
+
     @Query("SELECT COUNT(DISTINCT oi.order.id) FROM OrderItem oi " +
            "JOIN oi.product p WHERE p.seller.id = :sellerId AND oi.order.createdAt >= :date")
     long countOrdersForSellerAfter(@Param("sellerId") Long sellerId, @Param("date") java.time.LocalDateTime date);

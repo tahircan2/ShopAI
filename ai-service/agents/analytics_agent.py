@@ -36,8 +36,9 @@ Veritabanı Tabloları (MySQL):
 3. categories (id, name, slug, description, parent_id → categories.id)
    - Kategori bazlı satış analizi için bu tabloyu kullanın.
 
-4. orders (id, order_number, user_id → users.id, total_amount, status, created_at, updated_at)
+4. orders (id, order_number, user_id → users.id, total_amount, status, created_at, updated_at, shipping_mode)
    - status: PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED, REFUNDED
+   - shipping_mode: Air, Road, Ship
 
 5. order_items (id, order_id → orders.id, product_id → products.id, quantity, unit_price, total_price)
 

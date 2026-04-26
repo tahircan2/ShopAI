@@ -51,3 +51,38 @@
   text-align: center;
   padding: 40px;
 }
+.status-select {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--clr-border);
+  background: var(--clr-surface);
+  color: var(--clr-text);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--clr-primary);
+  }
+
+  &:focus {
+    border-color: var(--clr-primary);
+    box-shadow: 0 0 0 2px rgba(var(--clr-primary-rgb), 0.1);
+  }
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+
+  &-warning { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+  &-info { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
+  &-primary { background: rgba(99, 102, 241, 0.1); color: #4f46e5; }
+  &-success { background: rgba(16, 185, 129, 0.1); color: #059669; }
+  &-danger { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+  &-muted { background: rgba(107, 114, 128, 0.1); color: #4b5563; }
+}

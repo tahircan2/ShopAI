@@ -146,9 +146,10 @@ public class TypesenseProductService {
                     .documents()
                     .import_(jsonl.toString(), params);
 
-            log.info("Typesense toplu index: {} ürün indexlendi", products.size());
+            log.info("Typesense toplu index: {} ürün başarıyla indexlendi", products.size());
         } catch (Exception e) {
-            log.error("Typesense toplu index hatası: {}", e.getMessage(), e);
+            log.error("Typesense toplu index hatası ({} ürün): {}", products.size(), e.getMessage(), e);
+            throw new RuntimeException("Typesense toplu indexleme başarısız oldu", e);
         }
     }
 

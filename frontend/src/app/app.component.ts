@@ -31,8 +31,10 @@ import { AgentNotificationBannerComponent } from './shared/components/agent-noti
     <main class="page-content" [class.no-padding]="isAiChat()">
       <router-outlet />
     </main>
-    @if (!isAiChat()) {
+    @if (!hideFooter()) {
       <app-footer />
+    }
+    @if (!isAiChat()) {
       <app-chatbot />
     }
     <app-toast />
@@ -53,6 +55,13 @@ export class AppComponent {
 
   readonly currentUrl = signal<string>('');
   readonly isAiChat = computed(() => this.currentUrl().includes('/ai-chat'));
+  readonly hideFooter = computed(() => {
+    const url = this.currentUrl();
+    return url.includes('/ai-chat') || 
+           url.startsWith('/admin') || 
+           url.startsWith('/seller') || 
+           url.startsWith('/dashboard');
+  });
 
   constructor() {
     this.router.events.pipe(

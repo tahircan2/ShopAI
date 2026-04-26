@@ -97,7 +97,7 @@ GENERAL — Yukarıdakilerden hiçbirine girmeyen genel sorular
 Sadece etiket yaz. Açıklama ekleme."""
 
 
-async def classify_intent(messages: list[BaseMessage]) -> str:
+async def classify_intent(messages: list[BaseMessage], user_role: str) -> str:
     """Sohbet geçmişinden ve son mesajdan intent çıkarır."""
     llm = ChatOpenAI(
         model=settings.openai_model,
@@ -105,9 +105,15 @@ async def classify_intent(messages: list[BaseMessage]) -> str:
         api_key=settings.openai_api_key,
     )
 
+    role_context = ""
+    if user_role in ("ROLE_ADMIN", "ROLE_SELLER", "ADMIN", "SELLER"):
+        role_context = "\nBu kullanıcı bir SATICI veya YÖNETİCİ. Kendi satışları veya genel metrikler hakkındaki soruları ANALYTICS olarak işaretle."
+    else:
+        role_context = "\nBu kullanıcı normal bir MÜŞTERİ (USER). 'En çok satan ürünler', 'popüler ürünler', 'en yüksek puanlı ürünler' gibi listeleme isteklerini kesinlikle PRODUCT_FILTER veya RECOMMENDATION olarak işaretle. Müşteriler ANALYTICS kullanamaz!"
+
     try:
         response = await llm.ainvoke([
-            SystemMessage(content=SUPERVISOR_SYSTEM_PROMPT),
+            SystemMessage(content=SUPERVISOR_SYSTEM_PROMPT + role_context),
             *messages,
         ])
 
@@ -141,6 +147,7 @@ Kullanıcılara e-ticaret platformumuzdaki tüm süreçlerde rehberlik edersiniz
 3. **Yapılandırma**: Yanıtlarınızı Markdown kullanarak (başlıklar, listeler, kalın yazılar) kolay okunabilir hale getirin.
 4. **Zarafet**: Emoji kullanımını şık ve yerinde yapın (örn: ✨, 🛍️, 🤝).
 5. **Yönlendirme**: Eğer kullanıcı ne yapacağını bilemiyorsa, ona en popüler kategorileri veya kampanyaları incelemesini nazikçe önerin.
+6. **DÜRÜSTLÜK (ÇOK ÖNEMLİ)**: Asla sistemde olmayan, hayali ürünler, fiyatlar veya markalar (Nike, Adidas, Apple vb. sizde yoksa) uydurmayın. Eğer bir ürünü aramak veya önermek gerekirse genel tavsiyelerde bulunun ancak uydurma ürün listesi ÇIKARMAYIN.
 
 NOT: Sohbeti her zaman profesyonel bir selamlamayla başlatın veya nazik bir kapanışla bitirin.
 """
@@ -359,7 +366,7 @@ async def supervisor_node(state: AgentState) -> AgentState:
     if any(kw in message.lower() for kw in analytics_keywords) and is_seller_or_admin:
         intent = IntentType.ANALYTICS
     else:
-        intent = await classify_intent(messages)
+        intent = await classify_intent(messages, user_role)
 
     # Agent seç
     selected_agent = INTENT_TO_AGENT.get(intent, "supervisor")

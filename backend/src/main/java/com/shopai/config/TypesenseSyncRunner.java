@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -41,28 +43,28 @@ public class TypesenseSyncRunner implements ApplicationRunner {
             // 1. Koleksiyonu oluştur (yoksa)
             typesenseProductService.ensureCollection();
 
-            // 2. Tüm aktif ürünleri MySQL'den çek
-            List<Product> activeProducts = productRepository.findAll()
-                    .stream()
-                    .filter(p -> Boolean.TRUE.equals(p.getIsActive()) && !Boolean.TRUE.equals(p.getIsDeleted()))
-                    .toList();
+            long totalProducts = productRepository.count();
+            int batchSize = 100;
+            int totalPages = (int) Math.ceil((double) totalProducts / batchSize);
+            int indexedCount = 0;
 
-            if (activeProducts.isEmpty()) {
-                log.info("  MySQL'de aktif ürün bulunamadı. Typesense boş başlıyor.");
-            } else {
-                // 3. Toplu indexle (batch'ler halinde — 100'erli)
-                int batchSize = 100;
-                for (int i = 0; i < activeProducts.size(); i += batchSize) {
-                    int end = Math.min(i + batchSize, activeProducts.size());
-                    List<Product> batch = activeProducts.subList(i, end);
-                    typesenseProductService.bulkIndex(batch);
-                    log.info("  Batch indexlendi: {}/{}", end, activeProducts.size());
+            log.info("  MySQL'de toplam {} ürün bulundu. Indexleme başlıyor...", totalProducts);
+
+            for (int i = 0; i < totalPages; i++) {
+                Page<Product> productPage = productRepository.findAll(PageRequest.of(i, batchSize));
+                List<Product> activeBatch = productPage.getContent().stream()
+                        .filter(p -> Boolean.TRUE.equals(p.getIsActive()))
+                        .toList();
+
+                if (!activeBatch.isEmpty()) {
+                    typesenseProductService.bulkIndex(activeBatch);
+                    indexedCount += activeBatch.size();
                 }
-                log.info("  ✓ Toplam {} ürün Typesense'e indexlendi.", activeProducts.size());
+                log.info("  Batch {}/{} tamamlandı. (Toplam {} ürün indexlendi)", i + 1, totalPages, indexedCount);
             }
 
             log.info("---------------------------------------------------------------");
-            log.info("  Typesense senkronizasyonu tamamlandı ✓");
+            log.info("  Typesense senkronizasyonu tamamlandı. Toplam: {} ✓", indexedCount);
             log.info("---------------------------------------------------------------");
         } catch (Exception e) {
             log.error("══ Typesense senkronizasyon hatası ══", e);

@@ -167,13 +167,26 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
-    public OrderResponse getOrderDetail(Long userId, String orderNumber, boolean isAdmin) {
+    public OrderResponse getOrderDetail(Long userId, String orderNumber, boolean isAdmin, boolean isSeller) {
         Order order;
         if (isAdmin) {
             order = orderRepository.findByOrderNumberWithItems(orderNumber)
                     .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber));
+        } else if (isSeller) {
+            // Satıcı ise tüm siparişler arasından bul, sonra satıcıya ait ürün var mı kontrol et.
+            order = orderRepository.findByOrderNumberWithItems(orderNumber)
+                    .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber));
+            
+            boolean ownsProduct = order.getItems().stream()
+                    .anyMatch(item -> item.getProduct() != null && item.getProduct().getSeller() != null 
+                            && item.getProduct().getSeller().getId().equals(userId));
+            
+            if (!ownsProduct) {
+                // Eğer siparişte satıcıya ait ürün yoksa 404 dönüyoruz ki sızma testi yapılamasın
+                throw new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber);
+            }
         } else {
-            // ownership check — kullanıcı yalnızca kendi siparişini görebilir
+            // Müşteri ise yalnızca kendi siparişini görebilir
             order = orderRepository.findByOrderNumberAndUserIdWithItems(orderNumber, userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber));
         }
@@ -215,6 +228,57 @@ public class OrderService {
         Map<String, String> newState = Map.of("status", "CANCELLED");
         auditLogService.logWithMap(userId, "ORDER_CANCELLED", "Order", saved.getId(), oldState, newState, ip, request.getHeader("User-Agent"));
 
+        return OrderResponse.from(saved);
+    }
+
+    // ─── Seller: Kendi Ürünlerini İçeren Siparişler ─────────────────────────
+    @Transactional(readOnly = true)
+    public Page<OrderSummaryResponse> getSellerOrders(Long sellerId, int page, int size) {
+        return orderRepository.findBySellerId(sellerId, PageRequest.of(page, Math.min(size, 20)))
+                .map(OrderSummaryResponse::from);
+    }
+
+    @Transactional
+    public OrderResponse updateSellerOrderStatus(Long sellerId, Long orderId, UpdateOrderStatusRequest req, jakarta.servlet.http.HttpServletRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Sipariş", orderId));
+
+        // Security: Satıcı bu siparişte en az bir ürüne sahip mi?
+        boolean ownsProduct = order.getItems().stream()
+                .anyMatch(item -> item.getProduct() != null && item.getProduct().getSeller() != null 
+                        && item.getProduct().getSeller().getId().equals(sellerId));
+
+        if (!ownsProduct) {
+            throw new BadRequestException("Bu siparişi güncelleme yetkiniz yok.");
+        }
+
+        Order.OrderStatus oldStatus = order.getStatus();
+        Order.OrderStatus newStatus;
+        try {
+            newStatus = Order.OrderStatus.valueOf(req.getStatus().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new BadRequestException("Geçersiz sipariş durumu: " + req.getStatus());
+        }
+
+        order.setStatus(newStatus);
+
+        if (newStatus == Order.OrderStatus.SHIPPED) {
+            order.setShippedAt(LocalDateTime.now());
+        } else if (newStatus == Order.OrderStatus.DELIVERED) {
+            order.setDeliveredAt(LocalDateTime.now());
+        }
+
+        Order saved = orderRepository.save(order);
+
+        // Bildirim + Email
+        notificationService.sendOrderStatusNotification(
+                order.getUser().getId(), order.getOrderNumber(), newStatus.name(), saved.getId());
+        emailService.sendOrderStatusUpdate(
+                order.getUser().getEmail(), order.getOrderNumber(), newStatus.name());
+
+        auditLogService.logWithMap(sellerId, "SELLER_ORDER_STATUS_UPDATE", "Order", orderId, 
+                Map.of("status", oldStatus.name()), Map.of("status", newStatus.name()), null, request.getHeader("User-Agent"));
+                
         return OrderResponse.from(saved);
     }
 

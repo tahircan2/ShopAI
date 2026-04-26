@@ -111,6 +111,26 @@
                 </app-agent-progress>
               }
 
+              @if (msg.actionType === 'ANALYTICS_RESULT') {
+                <div class="analytics-modern mt-2" [attr.data-rendered]="onAnalyticsRendered(msg)">
+                  <div class="a-header" style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 5px;">
+                    <span>📊 {{ msg.actionData?.rowCount || 0 }} Sonuç</span>
+                  </div>
+                  
+                  @if (msg.actionData?.chartConfig) {
+                    <div class="a-chart" style="height: 200px; width: 100%;">
+                      <canvas [id]="'analytics-chart-mini-' + msg.id"></canvas>
+                    </div>
+                  }
+
+                  @if (msg.actionData?.results) {
+                    <div class="a-table">
+                      <app-chat-data-table [data]="msg.actionData.results"></app-chat-data-table>
+                    </div>
+                  }
+                </div>
+              }
+
               @if (msg['feedbackRequested']) {
                 <div class="feedback-card" style="margin-top: 8px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.9em;">
                   <p style="margin: 0 0 8px 0; font-weight: 500;">Bu işlemden memnun kaldınız mı?</p>

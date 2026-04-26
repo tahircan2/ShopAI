@@ -44,9 +44,10 @@ public class OrderController {
     public ResponseEntity<OrderResponse> getOrderDetail(@AuthenticationPrincipal JwtAuthDetails auth,
                                                       @PathVariable String orderNumber,
                                                       @RequestParam(defaultValue = "false") boolean isAdmin) {
-        // Chatbot'tan ROLE_ADMIN ile gelinirse bu true olabilir
-        boolean isRequestingAdmin = isAdmin && "ADMIN".equals(auth.getRole());
-        return ResponseEntity.ok(orderService.getOrderDetail(auth.getUserId(), orderNumber, isRequestingAdmin));
+        String role = auth.getRole() != null ? auth.getRole().replace("ROLE_", "") : "";
+        boolean isRequestingAdmin = isAdmin && "ADMIN".equals(role);
+        boolean isSeller = "SELLER".equals(role);
+        return ResponseEntity.ok(orderService.getOrderDetail(auth.getUserId(), orderNumber, isRequestingAdmin, isSeller));
     }
 
     @PostMapping("/{orderNumber}/cancel")

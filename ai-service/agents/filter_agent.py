@@ -43,7 +43,12 @@ Kullanıcı mesajından ürün filtresi parametrelerini çıkar ve JSON formatı
 - brand: string 
 - rating: number
 - sort_by: string (price | rating | ratingCount | createdAt)
-- sort_dir: string (asc | desc)
+  - Örn: "en çok puan alan" veya "en yüksek puan" -> rating
+  - Örn: "en çok yorum alan" veya "en çok değerlendirilen" -> ratingCount
+  - Örn: "en yüksek fiyatlı" veya "en pahalı" -> price
+  - Örn: "en yeni" -> createdAt
+- sort_dir: string (asc | desc). (En yüksek/en çok/en yeni için 'desc', En düşük/en ucuz için 'asc')
+- size: number (kullanıcı 'en pahalı ürün' gibi tekil bir şey istiyorsa 1, 'ürünler' gibi çoğul ise veya belirtilmemişse 10)
 - detail_mode: boolean (kullanıcı ürün detayı istiyorsa true)
 
 SADECE geçerli JSON döndür, açıklama veya markdown ekleme.
@@ -58,6 +63,7 @@ UYGULANACAK STANDARTLAR:
 3. **Ürün Sunumu**: İlk 3 ürünü bir liste halinde, her birine dair kısa ve çekici bir notla sunun.
 4. **Samimiyet ve Rehberlik**: Eğer sonuç azsa veya yoksa, kullanıcıyı hayal kırıklığına uğratmadan alternatif önerilerde bulunun (örn: "Fiyat aralığını biraz genişletmek isterseniz...")
 5. **Modern Emoji Kullanımı**: Sektöre uygun emojileri (🛍️, ✨, 🔍) ölçülü şekilde kullanarak metni canlandırın.
+6. **DÜRÜSTLÜK (ÇOK ÖNEMLİ)**: KESİNLİKLE hayali, uydurma ürünler oluşturmayın. SADECE size sağlanan JSON formatındaki gerçek arama sonuçlarında var olan ürünlerden bahsedin. Eğer size iletilen JSON sonuçlarında ürün yoksa "Şu Adidas ayakkabıyı alabilirsiniz" gibi hayali öneriler yapmayın!
 """
 
 DETAIL_RESPONSE_PROMPT = """Siz ShopAI'nın uzman ürün danışmanısınız. 
@@ -187,7 +193,7 @@ async def filter_agent_node(state: AgentState) -> AgentState:
 
     try:
         # 2. Ürünü ara
-        if params.get("q") and not any(k in params for k in ["category", "colors", "sizes", "brand"]):
+        if params.get("q") and not any(k in params for k in ["category", "colors", "sizes", "brand", "sort_by", "min_price", "max_price", "rating"]):
             result = await search_products.ainvoke({
                 "query": params["q"],
                 "user_id": user_id,

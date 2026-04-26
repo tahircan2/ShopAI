@@ -1,8 +1,11 @@
 spring:
+  docker:
+    compose:
+      file: ../docker-compose.yml
   config:
     import: "optional:file:.env[.properties]"
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:3306/shopai?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/shopai?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:shopai_user}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver

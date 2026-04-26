@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { CartService } from '../../../core/services/cart.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { ProductService } from '../../../core/services/product.service';
+import { WishlistService } from '../../../core/services/wishlist.service';
 
 @Component({
   selector: 'app-navbar',
@@ -20,6 +21,7 @@ export class NavbarComponent implements OnInit {
   private readonly productService = inject(ProductService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly wishlistService = inject(WishlistService);
 
   readonly scrolled = signal(false);
   readonly mobileOpen = signal(false);
@@ -30,8 +32,13 @@ export class NavbarComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      if (this.auth.isLoggedIn() && !this.cartService.cart()) {
-        this.cartService.getCart().subscribe();
+      if (this.auth.isLoggedIn()) {
+        if (!this.cartService.cart()) {
+          this.cartService.getCart().subscribe();
+        }
+        if (this.wishlistService.wishlistIds().size === 0 && !this.wishlistService.loaded() && !this.wishlistService.loading()) {
+          this.wishlistService.load().subscribe();
+        }
       }
     }, { allowSignalWrites: true });
   }

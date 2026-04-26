@@ -67,6 +67,7 @@
             <artifactId>flyway-mysql</artifactId>
         </dependency>
 
+
         <!-- JWT (jjwt) -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
@@ -184,7 +185,7 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>10.15.0</version>
                 <configuration>
-                    <url>jdbc:mysql://localhost:3306/shopai?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
+                    <url>jdbc:mysql://127.0.0.1:3307/shopai?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;serverTimezone=UTC</url>
                     <user>shopai_user</user>
                     <password>${env.DB_PASSWORD}</password>
                 </configuration>

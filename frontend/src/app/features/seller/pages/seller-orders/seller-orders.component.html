@@ -19,6 +19,7 @@
         <th>Müşteri</th>
         <th>Tutar</th>
         <th>Durum</th>
+        <th>İşlem</th>
         <th>Tarih</th>
       </tr>
     </thead>
@@ -29,7 +30,16 @@
         <td class="text-sm">{{ o.userName }}</td>
         <td style="font-weight:600;font-size:13px">₺{{ o.totalAmount | number:'1.2-2' }}</td>
         <td><span class="badge" [class]="statusBadge(o.status)">{{ statusLabel(o.status) }}</span></td>
-        <td class="text-dim text-xs">{{ o.createdAt | date:'dd.MM.yyyy' }}</td>
+        <td>
+          <select class="status-select" [value]="o.status" (change)="updateStatus(o.id, $any($event.target).value)">
+            <option value="PENDING">Beklemede</option>
+            <option value="CONFIRMED">Onaylandı</option>
+            <option value="SHIPPED">Kargoya Verildi</option>
+            <option value="DELIVERED">Teslim Edildi</option>
+            <option value="CANCELLED">İptal Edildi</option>
+          </select>
+        </td>
+        <td class="text-dim text-xs">{{ o.createdAt | date:'dd.MM.yyyy HH:mm' }}</td>
       </tr>
       }
     </tbody>

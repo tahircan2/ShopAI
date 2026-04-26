@@ -10,6 +10,7 @@ import { AgentProgressComponent } from '../../shared/components/agent-progress/a
 import { ChatDataTableComponent } from '../../shared/components/chat-data-table/chat-data-table.component';
 import { Router, RouterLink } from '@angular/router';
 import { Chart, registerables } from 'chart.js';
+import { ProductService } from '../../core/services/product.service';
 
 Chart.register(...registerables);
 
@@ -24,6 +25,7 @@ export class AiChatPageComponent implements OnInit, AfterViewChecked {
   readonly aiChat = inject(AiChatService);
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly productService = inject(ProductService);
 
   @ViewChild('chatContainer') chatContainer!: ElementRef<HTMLDivElement>;
 
@@ -176,17 +178,37 @@ export class AiChatPageComponent implements OnInit, AfterViewChecked {
     this.showConfirmModal = false;
   }
 
-  getTop3Products(data: any): any[] {
-    if (!data?.products) return [];
-    return data.products.slice(0, 3);
+  getTop3Products(actionData: any): any[] {
+    const productData = actionData?.products;
+    const content = productData?.content ?? productData;
+    if (Array.isArray(content)) {
+      return content.slice(0, 3);
+    }
+    return [];
   }
 
-  hasMoreProducts(data: any): boolean {
-    return data?.products?.length > 3;
+  hasMoreProducts(actionData: any): boolean {
+    const productData = actionData?.products;
+    const content = productData?.content ?? productData;
+    if (Array.isArray(content)) {
+      return content.length > 3 || (productData?.totalElements && productData.totalElements > 3);
+    }
+    return false;
   }
 
   goToProductDetail(slug: string): void {
     this.router.navigate(['/products', slug]);
+  }
+
+  showAllProducts(actionData: any): void {
+    const productData = actionData?.products;
+    const content = productData?.content ?? productData;
+    
+    if (Array.isArray(content)) {
+      this.productService.applyAiFilter(content);
+    }
+    
+    this.router.navigate(['/products']);
   }
 
   onApprovalCompleted(messageId: string, event: any): void {
@@ -216,9 +238,9 @@ export class AiChatPageComponent implements OnInit, AfterViewChecked {
   }
 
   // ── Analytics Chart Rendering ──────────────────────────────────────────────
-  private analyticsCharts = new Map<string, Chart>();
+  private analyticsCharts = new Map<number, Chart>();
 
-  renderAnalyticsChart(msgId: string, chartConfig: any): void {
+  renderAnalyticsChart(msgId: number, chartConfig: any): void {
     if (!chartConfig) return;
 
     setTimeout(() => {
@@ -232,6 +254,13 @@ export class AiChatPageComponent implements OnInit, AfterViewChecked {
 
       // Apply dark theme defaults
       const config = { ...chartConfig };
+      
+      // If chart config lacks actual data, hide the canvas container to prevent blank spaces
+      if (!config.data || !config.data.labels || config.data.labels.length === 0 || !config.data.datasets || config.data.datasets.length === 0) {
+        if (canvas.parentElement) canvas.parentElement.style.display = 'none';
+        return;
+      }
+
       if (!config.options) config.options = {};
       if (!config.options.plugins) config.options.plugins = {};
       if (!config.options.plugins.legend) config.options.plugins.legend = {};
@@ -246,8 +275,15 @@ export class AiChatPageComponent implements OnInit, AfterViewChecked {
         }
       }
 
-      const chart = new Chart(canvas, config);
-      this.analyticsCharts.set(msgId, chart);
+      try {
+        const chart = new Chart(canvas, config);
+        this.analyticsCharts.set(msgId, chart);
+      } catch (e) {
+        console.error('Chart rendering failed:', e);
+        if (canvas.parentElement) {
+          canvas.parentElement.style.display = 'none';
+        }
+      }
     }, 200);
   }
 
@@ -255,10 +291,13 @@ export class AiChatPageComponent implements OnInit, AfterViewChecked {
     return msg.actionType === 'ANALYTICS_RESULT' && msg.actionData?.chartConfig;
   }
 
-  onAnalyticsRendered(msg: any): void {
+  onAnalyticsRendered(msg: any): string {
     if (!msg['_chartRendered'] && this.isAnalyticsResult(msg)) {
-      msg['_chartRendered'] = true;
-      this.renderAnalyticsChart(msg.id, msg.actionData.chartConfig);
+      setTimeout(() => {
+        msg['_chartRendered'] = true;
+        this.renderAnalyticsChart(msg.id, msg.actionData.chartConfig);
+      }, 0);
     }
+    return 'true';
   }
 }

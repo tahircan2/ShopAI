@@ -11,9 +11,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import com.shopai.service.OrderService;
 
 import java.util.Map;
 
@@ -25,6 +28,7 @@ import java.util.Map;
 public class SellerController {
 
     private final ProductService productService;
+    private final OrderService orderService;
 
     @GetMapping("/stats")
     @Operation(summary = "Satıcıya özel istatistikleri getir")
@@ -39,5 +43,24 @@ public class SellerController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(productService.getSellerProducts(auth.getUserId(), page, size));
+    }
+
+    @GetMapping("/orders")
+    @Operation(summary = "Satıcının ürünlerini içeren siparişleri listele")
+    public ResponseEntity<Page<com.shopai.dto.response.OrderResponses.OrderSummaryResponse>> getMyOrders(
+            @AuthenticationPrincipal JwtAuthDetails auth,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(orderService.getSellerOrders(auth.getUserId(), page, size));
+    }
+
+    @PatchMapping("/orders/{id}/status")
+    @Operation(summary = "Sipariş durumunu güncelle (Satıcı)")
+    public ResponseEntity<com.shopai.dto.response.OrderResponses.OrderResponse> updateOrderStatus(
+            @AuthenticationPrincipal JwtAuthDetails auth,
+            @PathVariable Long id,
+            @jakarta.validation.Valid @org.springframework.web.bind.annotation.RequestBody com.shopai.dto.request.OrderRequests.UpdateOrderStatusRequest req,
+            jakarta.servlet.http.HttpServletRequest request) {
+        return ResponseEntity.ok(orderService.updateSellerOrderStatus(auth.getUserId(), id, req, request));
     }
 }

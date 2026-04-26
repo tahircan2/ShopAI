@@ -133,6 +133,11 @@
                     </div>
                   </div>
                 }
+                @if (hasMoreProducts(msg.actionData)) {
+                  <button class="show-all-products-btn" (click)="showAllProducts(msg.actionData)" style="width: 100%; padding: 10px; margin-top: 8px; border: none; border-radius: 8px; background: rgba(99,102,241,0.1); color: #818cf8; font-weight: 500; cursor: pointer; transition: background 0.2s;">
+                    Tümünü Göster
+                  </button>
+                }
               </div>
             }
 
@@ -168,20 +173,23 @@
               </div>
             }
 
-            @if (msg.actionType === 'ANALYTICS_RESULT' && msg.actionData?.chartConfig) {
+            @if (msg.actionType === 'ANALYTICS_RESULT') {
               <div class="analytics-modern mt-2" [attr.data-rendered]="onAnalyticsRendered(msg)">
                 <div class="a-header">
-                  <span>📊 {{ msg.actionData.rowCount }} Sonuç</span>
+                  <span>📊 {{ msg.actionData?.rowCount || 0 }} Sonuç</span>
                 </div>
-                <div class="a-chart">
-                  <canvas [id]="'analytics-chart-' + msg.id"></canvas>
-                </div>
-              </div>
-            }
+                
+                @if (msg.actionData?.chartConfig) {
+                  <div class="a-chart">
+                    <canvas [id]="'analytics-chart-' + msg.id"></canvas>
+                  </div>
+                }
 
-            @if (msg.actionType === 'ANALYTICS_RESULT' && msg.actionData?.results && !msg.actionData?.chartConfig) {
-              <div class="mt-2">
-                <app-chat-data-table [data]="msg.actionData.results"></app-chat-data-table>
+                @if (msg.actionData?.results) {
+                  <div class="a-table">
+                    <app-chat-data-table [data]="msg.actionData.results"></app-chat-data-table>
+                  </div>
+                }
               </div>
             }
 

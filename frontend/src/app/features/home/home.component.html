@@ -103,6 +103,16 @@
           @if (p.isFeatured) {
           <div class="featured-badge">⭐ Öne Çıkan</div>
           }
+          <button class="wishlist-btn" 
+                  [class.active]="wishlistService.isInWishlist(p.id)"
+                  (click)="toggleWishlist(p, $event)"
+                  aria-label="Favorilere Ekle">
+            <svg width="20" height="20" 
+                 [attr.fill]="wishlistService.isInWishlist(p.id) ? 'currentColor' : 'none'" 
+                 stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78v0z" />
+            </svg>
+          </button>
         </div>
         <div class="product-info">
           @if (p.brand) {

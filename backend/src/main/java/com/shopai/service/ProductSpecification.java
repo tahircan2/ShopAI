@@ -139,7 +139,7 @@ public class ProductSpecification {
             boolean asc = "asc".equalsIgnoreCase(filter.getSortDir());
 
             Expression<?> sortExpr = switch (sortBy) {
-                case "price" -> root.get("price");
+                case "price" -> cb.coalesce(root.get("discountedPrice"), root.get("price"));
                 case "rating", "ratingAvg" -> root.get("ratingAvg");
                 case "ratingCount" -> root.get("ratingCount");
                 default -> root.get("createdAt");

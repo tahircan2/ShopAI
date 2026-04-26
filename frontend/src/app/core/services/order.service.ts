@@ -32,6 +32,17 @@ export class OrderService {
     return this.http.post<Order>(`${this.api}/${orderNumber}/cancel`, {});
   }
 
+  // Seller
+  getSellerOrders(page = 0, size = 10): Observable<{ content: OrderSummary[]; totalElements: number }> {
+    return this.http.get<{ content: OrderSummary[]; totalElements: number }>(`${environment.apiUrl}/seller/orders`, {
+      params: { page, size }
+    });
+  }
+
+  updateSellerOrderStatus(id: number, status: string): Observable<Order> {
+    return this.http.patch<Order>(`${environment.apiUrl}/seller/orders/${id}/status`, { status });
+  }
+
   // Admin
   getAllOrders(page = 0, size = 20): Observable<{ content: OrderSummary[]; totalElements: number }> {
     return this.http.get<{ content: OrderSummary[]; totalElements: number }>(`${environment.apiUrl}/admin/orders`, {

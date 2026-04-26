@@ -17,6 +17,9 @@ import java.util.Optional;
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     Optional<Product> findBySlugAndIsActiveTrue(String slug);
+    Optional<Product> findBySlug(String slug);
+    boolean existsBySku(String sku);
+    boolean existsBySlug(String slug);
 
     Page<Product> findByIsFeaturedTrueAndIsActiveTrue(Pageable pageable);
 

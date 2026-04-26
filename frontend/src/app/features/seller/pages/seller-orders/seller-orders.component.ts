@@ -17,12 +17,29 @@ export class SellerOrdersComponent implements OnInit {
   readonly loading = signal(true);
 
   ngOnInit(): void {
-    this.orderService.getMyOrders().subscribe({
+    this.loadOrders();
+  }
+
+  loadOrders(): void {
+    this.loading.set(true);
+    this.orderService.getSellerOrders().subscribe({
       next: r => {
         this.orders.set(r.content);
         this.loading.set(false);
       },
       error: () => this.loading.set(false)
+    });
+  }
+
+  updateStatus(orderId: number, status: string): void {
+    this.orderService.updateSellerOrderStatus(orderId, status).subscribe({
+      next: () => {
+        this.loadOrders();
+      },
+      error: (err) => {
+        console.error('Status update failed', err);
+        // Optionally add a notification here
+      }
     });
   }
 

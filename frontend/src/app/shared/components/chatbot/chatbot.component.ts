@@ -11,11 +11,15 @@ import { AgentProgressComponent } from '../agent-progress/agent-progress.compone
 import { AgentBridgeService } from '../../../services/agent-bridge.service';
 import { CurrencyFormatPipe } from '../../pipes/shared-pipes';
 import { MarkdownPipe } from '../../pipes/markdown.pipe';
+import { Chart, registerables } from 'chart.js';
+import { ChatDataTableComponent } from '../chat-data-table/chat-data-table.component';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-chatbot',
   standalone: true,
-  imports: [FormsModule, AgentApprovalCardComponent, AgentProgressComponent, CurrencyFormatPipe, MarkdownPipe],
+  imports: [FormsModule, AgentApprovalCardComponent, AgentProgressComponent, CurrencyFormatPipe, MarkdownPipe, ChatDataTableComponent],
   templateUrl: './chatbot.component.html',
   styleUrl: './chatbot.component.scss'
 })
@@ -144,30 +148,14 @@ export class ChatbotComponent implements AfterViewChecked {
   }
 
   showAllProducts(actionData: any): void {
-    const filters = actionData?.filters;
-    const queryParams: any = {};
+    const productData = actionData?.products;
+    const content = productData?.content ?? productData;
     
-    if (filters) {
-      // AI'dan gelen filtreleri URL parametrelerine dönüştür
-      if (filters.q) queryParams.q = filters.q;
-      if (filters.category) {
-        // Basit slug dönüşümü (Kategori ismi gelirse diye)
-        queryParams.categorySlug = filters.category.toLowerCase()
-          .replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ş/g, 's')
-          .replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ç/g, 'c')
-          .replace(/ /g, '-');
-      }
-      if (filters.brand) queryParams.brand = filters.brand;
-      if (filters.min_price) queryParams.minPrice = filters.min_price;
-      if (filters.max_price) queryParams.maxPrice = filters.max_price;
-      if (filters.rating) queryParams.minRating = filters.rating;
-      if (filters.sort_by) queryParams.sortBy = filters.sort_by;
-      if (filters.sort_dir) queryParams.sortDir = filters.sort_dir;
+    if (Array.isArray(content)) {
+      this.productService.applyAiFilter(content);
     }
-
-    // AI filtresini temizleyip URL üzerinden gitmek daha sağlıklı (pagination vb. için)
-    this.productService.clearAiFilter();
-    this.router.navigate(['/products'], { queryParams });
+    
+    this.router.navigate(['/products']);
     this.open.set(false); // sohbet penceresini kapat
   }
 
@@ -225,5 +213,66 @@ export class ChatbotComponent implements AfterViewChecked {
         this.toast.success("Geri bildirim kaydedildi.");
       }
     });
+  }
+
+  private analyticsCharts = new Map<number, Chart>();
+
+  renderAnalyticsChart(msgId: number, chartConfig: any): void {
+    if (!chartConfig) return;
+
+    setTimeout(() => {
+      const canvasId = `analytics-chart-mini-${msgId}`;
+      const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+      if (!canvas) return;
+
+      const existing = this.analyticsCharts.get(msgId);
+      if (existing) existing.destroy();
+
+      const config = { ...chartConfig };
+      
+      // If chart config lacks actual data, hide the canvas container to prevent blank spaces
+      if (!config.data || !config.data.labels || config.data.labels.length === 0 || !config.data.datasets || config.data.datasets.length === 0) {
+        if (canvas.parentElement) canvas.parentElement.style.display = 'none';
+        return;
+      }
+
+      if (!config.options) config.options = {};
+      if (!config.options.plugins) config.options.plugins = {};
+      if (!config.options.plugins.legend) config.options.plugins.legend = {};
+      config.options.plugins.legend.labels = { ...config.options.plugins.legend.labels, color: '#e2e8f0' };
+      config.options.responsive = true;
+      config.options.maintainAspectRatio = false;
+
+      if (config.options.scales) {
+        for (const axis of Object.values(config.options.scales) as any[]) {
+          if (axis.ticks) axis.ticks.color = '#94a3b8';
+          if (axis.grid) axis.grid.color = 'rgba(99,102,241,0.08)';
+        }
+      }
+
+      try {
+        const chart = new Chart(canvas, config);
+        this.analyticsCharts.set(msgId, chart);
+      } catch (e) {
+        console.error('Chart rendering failed:', e);
+        if (canvas.parentElement) {
+          canvas.parentElement.style.display = 'none';
+        }
+      }
+    }, 200);
+  }
+
+  isAnalyticsResult(msg: any): boolean {
+    return msg.actionType === 'ANALYTICS_RESULT' && msg.actionData?.chartConfig;
+  }
+
+  onAnalyticsRendered(msg: any): string {
+    if (!msg['_chartRendered'] && this.isAnalyticsResult(msg)) {
+      setTimeout(() => {
+        msg['_chartRendered'] = true;
+        this.renderAnalyticsChart(msg.id, msg.actionData.chartConfig);
+      }, 0);
+    }
+    return 'true';
   }
 }

@@ -9,6 +9,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { ProductSummary, ProductFilter, Category } from '../../../core/models/product.model';
 import { CurrencyFormatPipe } from '../../../shared/pipes/shared-pipes';
 import { PaginationComponent } from '../../../shared/components/pagination/pagination.component';
+import { WishlistService } from '../../../core/services/wishlist.service';
 
 @Component({
   selector: 'app-product-list',
@@ -24,6 +25,7 @@ export class ProductListComponent implements OnInit {
   private readonly cartService = inject(CartService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  readonly wishlistService = inject(WishlistService);
 
   readonly products = signal<ProductSummary[]>([]);
   readonly categories = signal<Category[]>([]);
@@ -180,5 +182,29 @@ export class ProductListComponent implements OnInit {
       next: () => this.toast.success('Ürün sepete eklendi!'),
       error: (err) => this.toast.error(err.error?.message ?? 'Sepete eklenemedi.')
     });
+  }
+
+  toggleWishlist(p: ProductSummary, event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (!this.auth.isLoggedIn()) {
+      this.toast.info('Favorilere eklemek için giriş yapınız.');
+      this.router.navigate(['/auth/login']);
+      return;
+    }
+
+    const isInWishlist = this.wishlistService.isInWishlist(p.id);
+    if (isInWishlist) {
+      this.wishlistService.remove(p.id).subscribe({
+        next: () => this.toast.success('Ürün favorilerden çıkarıldı.'),
+        error: () => this.toast.error('İşlem başarısız oldu.')
+      });
+    } else {
+      this.wishlistService.add(p.id).subscribe({
+        next: () => this.toast.success('Ürün favorilere eklendi!'),
+        error: () => this.toast.error('İşlem başarısız oldu.')
+      });
+    }
   }
 }

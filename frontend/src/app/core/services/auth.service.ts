@@ -7,11 +7,13 @@ import {
   User, AuthRequest, RegisterRequest, AuthResponse,
   SessionStatus, PasswordChangeRequest, ForgotPasswordRequest, ResetPasswordRequest
 } from '../models/user.model';
+import { WishlistService } from './wishlist.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
+  private readonly wishlistService = inject(WishlistService);
   private readonly api = `${environment.apiUrl}/auth`;
 
   // ── Signals ──────────────────────────────────────────────────────────────
@@ -48,11 +50,13 @@ export class AuthService {
     return this.http.post<void>(`${this.api}/logout`, {}).pipe(
       tap(() => {
         this.currentUser.set(null);
+        this.wishlistService.reset();
         this.router.navigate(['/auth/login']);
       }),
       catchError(err => {
         // Even if backend fails, clear local state
         this.currentUser.set(null);
+        this.wishlistService.reset();
         this.router.navigate(['/auth/login']);
         return throwError(() => err);
       })
