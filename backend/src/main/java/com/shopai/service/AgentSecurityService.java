@@ -1,6 +1,5 @@
 package com.shopai.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.shopai.entity.PendingApproval;
 import com.shopai.entity.User;
@@ -20,7 +19,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.Base64;
-import java.util.List;
+
 import java.util.UUID;
 
 @Service
@@ -40,7 +39,7 @@ public class AgentSecurityService {
         try {
             // JSON'ı normalize et (sıralı key'ler, boşluksuz vb.)
             String normalizedData = canonicalizeJson(planData);
-            
+
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(normalizedData.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(hash);
@@ -51,7 +50,8 @@ public class AgentSecurityService {
     }
 
     private String canonicalizeJson(String json) {
-        if (json == null || json.isBlank()) return "";
+        if (json == null || json.isBlank())
+            return "";
         try {
             // ObjectMapper'ı yapılandır (Sıralı key'ler için)
             objectMapper.configure(com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
@@ -93,7 +93,8 @@ public class AgentSecurityService {
                 .orElseThrow(() -> new IllegalArgumentException("Geçersiz veya süresi dolmuş onay token'ı"));
 
         if (!approval.canBeUsed()) {
-            throw new IllegalStateException("Bu onay token'ı artık kullanılamaz (Süresi dolmuş veya zaten kullanılmış)");
+            throw new IllegalStateException(
+                    "Bu onay token'ı artık kullanılamaz (Süresi dolmuş veya zaten kullanılmış)");
         }
 
         String currentHash = calculatePlanHash(currentPlanData);
@@ -121,7 +122,8 @@ public class AgentSecurityService {
         long todayCount = agentTransactionRepository.countByUserIdAndCreatedAtAfter(userId, startOfDay);
 
         if (todayCount >= prefs.getDailyTransactionLimit()) {
-            throw new IllegalStateException("Günlük AI işlem limitinize ulaştınız (" + prefs.getDailyTransactionLimit() + ")");
+            throw new IllegalStateException(
+                    "Günlük AI işlem limitinize ulaştınız (" + prefs.getDailyTransactionLimit() + ")");
         }
     }
 
@@ -134,7 +136,8 @@ public class AgentSecurityService {
                 .orElse(UserAiPreference.builder().maxOrderAmount(new BigDecimal("5000.00")).build());
 
         if (amount != null && amount.compareTo(prefs.getMaxOrderAmount()) > 0) {
-            throw new IllegalStateException("Sipariş tutarı AI limitini aşıyor (Maks: " + prefs.getMaxOrderAmount() + " TL)");
+            throw new IllegalStateException(
+                    "Sipariş tutarı AI limitini aşıyor (Maks: " + prefs.getMaxOrderAmount() + " TL)");
         }
     }
 
@@ -145,7 +148,7 @@ public class AgentSecurityService {
     public void checkHourlyLimit(Long userId) {
         LocalDateTime oneHourAgo = LocalDateTime.now().minusHours(1);
         long hourlyCount = agentTransactionRepository.countByUserIdAndCreatedAtAfter(userId, oneHourAgo);
-        
+
         // Sabit limit: Saatte en fazla 30 işlem (spam koruması)
         if (hourlyCount >= 30) {
             throw new IllegalStateException("Çok fazla AI işlemi denediniz. Lütfen daha sonra tekrar deneyin.");
@@ -171,13 +174,8 @@ public class AgentSecurityService {
 
         // Kategori kontrolü
         if (prefs.getAutoApproveCategories() != null && actionCategory != null) {
-            try {
-                java.util.List<String> categories = objectMapper.readValue(prefs.getAutoApproveCategories(), new TypeReference<List<String>>() {});
-                return categories.contains(actionCategory);
-            } catch (Exception e) {
-                log.error("Failed to parse auto approve categories", e);
-                return false;
-            }
+            java.util.List<String> categories = prefs.getAutoApproveCategories();
+            return categories.contains(actionCategory);
         }
 
         return false;
@@ -190,7 +188,7 @@ public class AgentSecurityService {
     public void markTokenAsUsed(String token, Long transactionId) {
         PendingApproval approval = pendingApprovalRepository.findByApprovalToken(token)
                 .orElseThrow(() -> new ResourceNotFoundException("Approval token not found"));
-        
+
         approval.setStatus(PendingApproval.ApprovalStatus.APPROVED);
         approval.setRespondedAt(LocalDateTime.now());
         // Link to the newly created transaction if provided

@@ -1,7 +1,7 @@
 package com.shopai.controller;
 
 import com.shopai.dto.request.AgentRequests.UpdateAiPreferenceRequest;
-import com.shopai.entity.UserAiPreference;
+
 import com.shopai.security.JwtAuthDetails;
 import com.shopai.service.UserAiPreferenceService;
 import io.swagger.v3.oas.annotations.Operation;

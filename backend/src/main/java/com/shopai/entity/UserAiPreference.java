@@ -58,7 +58,7 @@ public class UserAiPreference {
      */
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "auto_approve_categories", columnDefinition = "JSON")
-    private String autoApproveCategories;
+    private java.util.List<String> autoApproveCategories;
 
     /**
      * Checkout sırasında varsayılan adresi otomatik kullan.

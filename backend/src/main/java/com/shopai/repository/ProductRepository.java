@@ -24,6 +24,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     Page<Product> findByIsFeaturedTrueAndIsActiveTrue(Pageable pageable);
 
     Page<Product> findBySellerId(Long sellerId, Pageable pageable);
+    Page<Product> findBySellerIdAndRatingCountGreaterThanOrderByCreatedAtDesc(Long sellerId, int ratingCount, Pageable pageable);
 
     long countBySellerId(Long sellerId);
 

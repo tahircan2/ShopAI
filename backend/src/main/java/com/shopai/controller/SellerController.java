@@ -45,6 +45,15 @@ public class SellerController {
         return ResponseEntity.ok(productService.getSellerProducts(auth.getUserId(), page, size));
     }
 
+    @GetMapping("/reviews")
+    @Operation(summary = "Satıcının ürünlerine yapılan yorumları listele")
+    public ResponseEntity<Page<com.shopai.dto.response.ProductResponses.ProductReviewListResponse>> getMyProductReviews(
+            @AuthenticationPrincipal JwtAuthDetails auth,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(productService.getSellerProductsWithReviews(auth.getUserId(), page, size));
+    }
+
     @GetMapping("/orders")
     @Operation(summary = "Satıcının ürünlerini içeren siparişleri listele")
     public ResponseEntity<Page<com.shopai.dto.response.OrderResponses.OrderSummaryResponse>> getMyOrders(

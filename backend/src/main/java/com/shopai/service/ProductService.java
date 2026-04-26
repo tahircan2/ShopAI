@@ -101,6 +101,26 @@ public class ProductService {
                 .map(ProductSummaryResponse::from);
     }
 
+    @Transactional(readOnly = true)
+    public Page<ProductReviewListResponse> getSellerProductsWithReviews(Long sellerId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, Math.min(size, 50));
+        return productRepository.findBySellerIdAndRatingCountGreaterThanOrderByCreatedAtDesc(sellerId, 0, pageable)
+                .map(p -> {
+                    // Get top 3 reviews
+                    List<ReviewResponse> topReviews = p.getReviews().stream()
+                            .filter(r -> Boolean.TRUE.equals(r.getIsApproved()))
+                            .sorted((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()))
+                            .limit(3)
+                            .map(ReviewResponse::from)
+                            .toList();
+
+                    return ProductReviewListResponse.builder()
+                            .product(ProductSummaryResponse.from(p))
+                            .reviews(topReviews)
+                            .build();
+                });
+    }
+
     // ─── Ürün Arama (Typesense ile typo-tolerant, MySQL fallback) ────────────
     @Transactional(readOnly = true)
     public Page<ProductSummaryResponse> search(String q, int page, int size) {

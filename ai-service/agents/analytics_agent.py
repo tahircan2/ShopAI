@@ -113,12 +113,15 @@ KURALLAR:
 - ROLE_ADMIN: Tüm verilere erişim
 - ROLE_SELLER: Sadece kendi ürünleri (seller_id = ?)
 - ROLE_USER: Analytics erişimi YOK
+
+13. Sıralama ve Limit: "En çok...", "En az...", "En iyi..." gibi sorularda sadece 1 sonuç değil, karşılaştırma yapılabilmesi için her zaman TOP 5 veya TOP 10 sonuç getirmeye çalışın (LIMIT 5 veya LIMIT 10 kullanın).
 """
 
 # ─── Analysis Prompt ──────────────────────────────────────────────────────────
-ANALYSIS_PROMPT = """Siz ShopAI'nın uzman veri analistisiniz. Aşağıdaki verileri profesyonel ve üst düzey bir e-ticaret danışmanı diliyle yorumlayın.
+ANALYSIS_PROMPT = """Siz ShopAI'nın uzman veri analistisiniz. Aşağıdaki SQL sorgusu sonucunda elde edilen verileri profesyonel ve üst düzey bir e-ticaret danışmanı diliyle yorumlayın.
 
-Veri Kümesi: {results}
+Çalıştırılan Sorgu: {sql}
+Elde Edilen Veri Kümesi: {results}
 
 KRİTİK KURALLAR:
 1. **Teknik Terim YASAK**: Yanıtınızda KESİNLİKLE "SQL", "sorgu", "veritabanı", "id", "user_id", "seller_id", "null", "empty" gibi teknik terimler kullanmayın. Kullanıcıya bir yazılımcı gibi değil, bir iş ortağı gibi hitap edin.
@@ -127,6 +130,7 @@ KRİTİK KURALLAR:
 4. **Profesyonel Hitap**: Her zaman 'Siz' dilini kullanın. Modern ve nazik olun.
 5. **Görsel Düzen**: Markdown başlıklarını (###) ve kalın yazıları (**) sadece en kritik yerlerde kullanın.
 6. **Aksiyon Odaklılık**: Veriyi sadece raporlamayın, çok kısa bir stratejik ipucu ekleyin.
+7. **Kapsam Farkındalığı**: Eğer veri kümesinde az sayıda sonuç varsa, bunun veritabanındaki TÜM veriler olduğunu varsaymayın. Sorgunun (sql) bir kısıtlama (WHERE, LIMIT, TOP vb.) içerip içermediğine bakın. Örneğin; "En çok yorum alan ürün hangisi?" sorusuna tek bir sonuç geldiyse, "Sistemde sadece bir ürün var" demek yerine "En çok ilgi gören ürününüz şudur" şeklinde yanıt verin.
 
 Örnek Yanıt Yapısı:
 ### 📊 Durum Analizi
@@ -181,25 +185,25 @@ async def analytics_agent_node(state: AgentState) -> AgentState:
 
     logger.info("analytics_agent_check", user_id=user_id, user_role=user_role)
 
-    # Rol kontrolü — sadece ADMIN ve SELLER
+    # Rol kontrolü
     if not user_role or user_role.strip() == "" or user_role.lower() == "none":
         logger.warning("analytics_access_denied_no_role", user_id=user_id)
         return {
             **state,
             "final_response": (
                 "📊 **Analytics özelliklerine şu anda erişemiyorum.**\n\n"
-                "Güvenlik protokolleri gereği bu verilere erişmek için giriş yapmış olmanız ve 'Satıcı' veya 'Admin' yetkisine sahip olmanız gerekmektedir. "
-                "Eğer zaten giriş yaptıysanız, oturumunuzun süresi dolmuş olabilir. Lütfen **sayfayı yenileyerek** tekrar deneyin."
+                "Güvenlik protokolleri gereği bu verilere erişmek için giriş yapmış olmanız gerekmektedir. "
+                "Lütfen **sayfayı yenileyerek** tekrar deneyin."
             ),
             "agent_type": "analytics_agent",
             "action_type": "INFO",
         }
 
-    if user_role not in ("ROLE_ADMIN", "ROLE_SELLER", "ADMIN", "SELLER"):
+    if user_role not in ("ROLE_ADMIN", "ROLE_SELLER", "ROLE_USER", "ADMIN", "SELLER", "USER"):
         logger.warning("analytics_access_denied_wrong_role", user_id=user_id, role=user_role)
         return {
             **state,
-            "final_response": "📊 Analytics özellikleri sadece Admin ve Satıcı hesapları için kullanılabilir. Mevcut yetkiniz bu verileri görmeye uygun değil.",
+            "final_response": "📊 Analytics özellikleri mevcut yetkiniz ile kullanılamaz.",
             "agent_type": "analytics_agent",
             "action_type": "INFO",
         }
@@ -217,14 +221,36 @@ async def analytics_agent_node(state: AgentState) -> AgentState:
         role_ctx = ""
         if user_role in ("ROLE_SELLER", "SELLER"):
             role_ctx = (
-                f"\nKullanıcı bir SATICI (seller_id = {user_id}). SADECE kendi ürünlerinin verilerini görmeli.\n"
+                f"\nKullanıcı bir SATICI (id = {user_id}).\n"
+                f"DİL KURALLARI (ÖNEMLİ):\n"
+                f"- Eğer kullanıcı 'ürünüm', 'benim', 'mağazam', 'satışlarım', 'kazancım' gibi iyelik/sahiplik belirten ifadeler kullanıyorsa (Örn: 'en çok yorum alan ürünüm hangisi?'): "
+                f"SADECE kendi verilerini görmeli. Bu durumda MUTLAKA 'products.seller_id = {user_id}' filtresini kullan.\n"
+                f"- Eğer kullanıcı genel ifadeler kullanıyorsa (Örn: 'en çok yorum alan ürün hangisi?', 'en popüler kategoriler') veya global bir trend soruyorsa: "
+                f"Tüm platform verilerine erişebilir. Bu durumda seller_id filtresi EKLEME.\n\n"
                 f"DİKKAT: 'orders' tablosundaki 'user_id' MÜŞTERİYİ temsil eder. Kendi satışlarını görmek için "
                 f"MUTLAKA 'order_items' ve 'products' tablolarını joinle ve 'products.seller_id = {user_id}' filtresini kullan.\n"
-                f"Örnek: SELECT ... FROM orders o JOIN order_items oi ON o.id = oi.order_id JOIN products p ON oi.product_id = p.id WHERE p.seller_id = {user_id} ...\n"
                 f"'?' kullanma, doğrudan {user_id} yaz."
             )
         elif user_role in ("ROLE_ADMIN", "ADMIN"):
-            role_ctx = "\nKullanıcı bir YÖNETİCİ. Tüm platform verilerine erişebilir."
+            role_ctx = "\nKullanıcı bir YÖNETİCİ. Tüm platform verilerine erişebilir.\n"
+        elif user_role in ("ROLE_USER", "USER"):
+            role_ctx = (
+                "\nKullanıcı bir MÜŞTERİ (ROLE_USER).\n"
+                "Müşteriler platformdaki genel ürün trendlerini sorgulayabilir.\n"
+                "GÜVENLİK (ÇOK ÖNEMLİ): Müşteriler ASLA ciro (total_amount), mağaza kazançları, diğer müşterilerin özel bilgileri veya sipariş detaylarını GÖREMEZ.\n"
+            )
+
+        sql_hints = (
+            "\nSQL İPUÇLARI (DOĞRULUK İÇİN):\n"
+            "- 'en çok satan ürün': order_items ve products tablolarını joinle, SUM(order_items.quantity) AS total_qty üzerinden grupla, ORDER BY total_qty DESC yap.\n"
+            "- 'en çok yorum alan / değerlendirilen ürün': products.rating_count sütununu kullan (ORDER BY rating_count DESC) veya reviews tablosunu joinleyip COUNT(*) kullan.\n"
+            "- 'en yüksek puan alan ürün': products.rating_avg sütununu kullan (ORDER BY rating_avg DESC). Sadece rating_count > 0 olanları filtrele ki hiç yorum almayanlar 0 veya NULL gelmesin.\n"
+            "- 'en yüksek/pahalı ürün': ORDER BY products.price DESC\n"
+            "- 'en düşük/ucuz ürün': ORDER BY products.price ASC\n"
+            "Tüm bu genel/trend sorgularında her zaman LIMIT 5 veya 10 kullanarak en iyi ürünleri getir."
+        )
+
+        role_ctx += sql_hints
 
         messages_to_send = [
             SystemMessage(content=SQL_GEN_PROMPT),

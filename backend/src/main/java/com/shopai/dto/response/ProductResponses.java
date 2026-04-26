@@ -230,4 +230,11 @@ public class ProductResponses {
                     .build();
         }
     }
+
+    @Data
+    @Builder
+    public static class ProductReviewListResponse {
+        private ProductSummaryResponse product;
+        private List<ReviewResponse> reviews;
+    }
 }

@@ -17,6 +17,7 @@ export class SellerShellComponent {
     { path: '/seller/dashboard', icon: '📊', label: 'Dashboard' },
     { path: '/seller/products', icon: '📦', label: 'Ürünlerim' },
     { path: '/seller/orders', icon: '🛒', label: 'Siparişler' },
+    { path: '/seller/reviews', icon: '💬', label: 'Yorumlar' },
     { path: '/seller/shop', icon: '🏪', label: 'Mağaza Ayarları' },
   ];
   shopInitial(): string { return (this.auth.currentUser()?.shopName ?? 'M')[0].toUpperCase(); }

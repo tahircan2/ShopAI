@@ -1,0 +1,94 @@
+<div class="reviews-container">
+  <div class="header">
+    <h1>Ürün Yorumları</h1>
+    <p>Ürünlerinize yapılan son yorumları ve puanları buradan takip edebilirsiniz.</p>
+  </div>
+
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Yorumlar yükleniyor...</p>
+    </div>
+  } @else if (productsWithReviews().length === 0) {
+    <div class="empty-state">
+      <lucide-icon [name]="messageIcon" class="empty-icon"></lucide-icon>
+      <h3>Henüz yorum yok</h3>
+      <p>Ürünlerinize henüz bir değerlendirme yapılmamış.</p>
+    </div>
+  } @else {
+    <div class="reviews-list">
+      @for (item of productsWithReviews(); track item.product.id) {
+        <div class="product-card" [class.expanded]="isExpanded(item.product.id)">
+          <div class="product-header" (click)="toggleExpand(item.product.id)">
+            <div class="product-info">
+              <div class="product-image">
+                <img [src]="item.product.primaryImageUrl || 'assets/no-image.png'" [alt]="item.product.name">
+                <div class="image-overlay"></div>
+              </div>
+              <div class="product-details">
+                <h3>{{ item.product.name }}</h3>
+                <div class="stats">
+                  <div class="rating-badge" [class.high]="item.product.ratingAvg >= 4" [class.medium]="item.product.ratingAvg >= 3 && item.product.ratingAvg < 4" [class.low]="item.product.ratingAvg < 3">
+                    <lucide-icon [name]="starIcon" class="star-icon fill"></lucide-icon>
+                    <span>{{ item.product.ratingAvg | number:'1.1-1' }}</span>
+                  </div>
+                  <span class="dot">•</span>
+                  <div class="count">
+                    <span>{{ item.product.ratingCount }} Değerlendirme</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="actions">
+              <div class="expand-btn" [class.rotated]="isExpanded(item.product.id)">
+                <lucide-icon [name]="chevronDown"></lucide-icon>
+              </div>
+            </div>
+          </div>
+
+          @if (isExpanded(item.product.id)) {
+            <div class="reviews-content">
+              <div class="reviews-items">
+                @for (review of item.reviews; track review.id) {
+                  <div class="review-item">
+                    <div class="review-header">
+                      <div class="review-meta">
+                        <div class="user-avatar">
+                          {{ review.userFullName.charAt(0) }}
+                        </div>
+                        <div class="user-info">
+                          <span class="user">{{ review.userFullName }}</span>
+                          <span class="date">{{ review.createdAt | date:'dd MMM yyyy' }}</span>
+                        </div>
+                      </div>
+                      <div class="review-rating-badge">
+                        @for (star of [1,2,3,4,5]; track star) {
+                          <lucide-icon [name]="starIcon" 
+                            [class.fill]="star <= review.rating"
+                            class="review-star">
+                          </lucide-icon>
+                        }
+                      </div>
+                    </div>
+                    @if (review.title) {
+                      <h4 class="review-title">{{ review.title }}</h4>
+                    }
+                    <p class="review-comment">{{ review.comment }}</p>
+                  </div>
+                }
+              </div>
+              
+              <div class="view-all">
+                <a [routerLink]="['/products', item.product.slug]" class="view-all-btn">
+                  <span>Tüm Yorumları Gör</span>
+                  <lucide-icon [name]="externalLink"></lucide-icon>
+                </a>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>

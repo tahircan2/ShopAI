@@ -39,7 +39,7 @@ public class SellerStatsService {
                 "change", calcChange(BigDecimal.valueOf(lastM), BigDecimal.valueOf(thisM)));
     }
 
-    @SuppressWarnings("unchecked")
+
     public Map<String, Object> getCustomers(Long sellerId) {
         Long total = (Long) em.createQuery(
                 "SELECT COUNT(DISTINCT o.user.id) FROM Order o JOIN o.items oi JOIN oi.product p WHERE p.seller.id = :sid AND o.status <> 'CANCELLED'"

@@ -2,7 +2,10 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Product, ProductSummary, ProductImage, ProductFilter, ProductPage, Review, ReviewRequest, Category, Coupon, CouponRequest } from '../models/product.model';
+import { 
+  Product, ProductSummary, ProductImage, ProductFilter, ProductPage, 
+  Review, ReviewRequest, Category, Coupon, CouponRequest, ProductReviewList 
+} from '../models/product.model';
 
 @Injectable({ providedIn: 'root' })
 export class ProductService {
@@ -95,6 +98,10 @@ export class ProductService {
   // Seller-specific
   getMyProducts(page = 0, size = 20): Observable<ProductPage> {
     return this.http.get<ProductPage>(`${environment.apiUrl}/seller/products`, { params: { page, size } });
+  }
+
+  getMyProductReviews(page = 0, size = 20): Observable<{ content: ProductReviewList[]; totalElements: number }> {
+    return this.http.get<{ content: ProductReviewList[]; totalElements: number }>(`${environment.apiUrl}/seller/reviews`, { params: { page, size } });
   }
 
   // Product Images (Cloudinary)

@@ -9,6 +9,7 @@ export const sellerRoutes: Routes = [
       { path: 'dashboard', loadComponent: () => import('./pages/seller-dashboard/seller-dashboard.component').then(m => m.SellerDashboardComponent) },
       { path: 'products', loadComponent: () => import('./pages/seller-products/seller-products.component').then(m => m.SellerProductsComponent) },
       { path: 'orders', loadComponent: () => import('./pages/seller-orders/seller-orders.component').then(m => m.SellerOrdersComponent) },
+      { path: 'reviews', loadComponent: () => import('./pages/seller-reviews/seller-reviews.component').then(m => m.SellerReviewsComponent) },
       { path: 'shop', loadComponent: () => import('./pages/seller-shop/seller-shop.component').then(m => m.SellerShopComponent) },
     ]
   }

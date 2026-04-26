@@ -275,6 +275,11 @@ export interface SellerStats {
   avgRating: number;
 }
 
+export interface ProductReviewList {
+  product: ProductSummary;
+  reviews: Review[];
+}
+
 // ─── Admin Models ─────────────────────────────────────────────────────────────
 
 export interface AdminStats {

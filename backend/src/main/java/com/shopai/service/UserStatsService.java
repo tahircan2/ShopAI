@@ -24,7 +24,7 @@ public class UserStatsService {
         private EntityManager em;
 
         // ─── Personal Stats (KPI kartları) ───────────────────────────────────────
-        @SuppressWarnings("unchecked")
+
         public Map<String, Object> getPersonalStats(Long userId) {
                 // Toplam harcama
                 BigDecimal totalSpend = (BigDecimal) em.createQuery(
