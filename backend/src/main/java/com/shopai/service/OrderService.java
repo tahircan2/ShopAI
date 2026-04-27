@@ -185,6 +185,13 @@ public class OrderService {
                 // Eğer siparişte satıcıya ait ürün yoksa 404 dönüyoruz ki sızma testi yapılamasın
                 throw new ResourceNotFoundException("Sipariş bulunamadı: " + orderNumber);
             }
+            
+            OrderResponse response = OrderResponse.from(order);
+            // Sadece satıcının kendi ürünlerini filtrele
+            response.setItems(response.getItems().stream()
+                    .filter(i -> i.getSellerId() != null && i.getSellerId().equals(userId))
+                    .toList());
+            return response;
         } else {
             // Müşteri ise yalnızca kendi siparişini görebilir
             order = orderRepository.findByOrderNumberAndUserIdWithItems(orderNumber, userId)

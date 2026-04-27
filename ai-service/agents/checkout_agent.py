@@ -91,10 +91,10 @@ async def _extract_product_from_message(messages: list[BaseMessage]) -> str | No
     try:
         response = await llm.ainvoke([
             SystemMessage(content=(
-                "Kullanıcı mesajında 'sepetime ekle ve satın al' gibi bileşik bir istek varsa, "
-                "eklenmek istenen ürünün adını SADECE ürün adı olarak döndür. "
-                "Eğer ürün adı yoksa veya mesaj bileşik değilse, 'NONE' döndür. "
-                "Başka hiçbir şey yazma."
+                "GÖREV: Kullanıcı mesajında 'sepetime ekle ve satın al' veya 'bunu al' gibi bileşik bir niyet varsa, eklenmek istenen ürünün adını çıkar.\n"
+                "KURALLAR:\n"
+                "1. SIFIR HALÜSİNASYON: Ürün adı mesajda net bir şekilde geçmiyorsa veya niyet belirsizse kesinlikle 'NONE' döndür.\n"
+                "2. ÇIKTI FORMATI: SADECE ürün adını döndür. Hiçbir açıklama, noktalama veya fazladan metin kullanma. Örn: 'ahşap sehpa'. Bulamazsan 'NONE'."
             )),
             messages[-1] if messages else SystemMessage(content=""),
         ])

@@ -18,27 +18,26 @@ from tools.product_tools import filter_products, search_products
 
 logger = structlog.get_logger(__name__)
 
-CART_INTENT_SYSTEM_PROMPT = """Sen bir sepet işlemleri sınıflandırma sistemisin.
-Kullanıcı mesajından sepet aksiyonunu ve parametrelerini çıkar. JSON döndür.
+CART_INTENT_SYSTEM_PROMPT = """Sen, ShopAI e-ticaret platformunun "Sepet İşlemleri Sınıflandırma ve Çıkarım" motorusun.
+Görevin: Kullanıcının mesaj geçmişini analiz edip sadece sepet eylemini ve gerekli parametreleri JSON olarak çıkarmaktır.
 
-Aksiyonlar:
-- GET: Sepeti görüntüle ("sepetimde ne var", "sepetimi göster")
-- ADD: Ürün ekle ("sepetime ekle", "en ucuzunu sepetime at", "bunu al")
-- REMOVE: Ürün çıkar ("sepetten çıkar", "kaldır")
-- CLEAR: Sepeti temizle ("sepetimi temizle", "hepsini sil")
-
-JSON formatı:
+KESİN KURALLAR VE MANTIK:
+1. SIFIR HALÜSİNASYON: Kullanıcı sepet işlemi istemiyorsa veya niyet belirsizse varsayılan olarak "GET" (Görüntüle) aksiyonunu seç.
+2. AKSİYON TİPLERİ:
+   - GET: Sepeti görüntüle ("sepetimde ne var", "sepetimi göster", "ne eklemiştim")
+   - ADD: Ürün ekle ("sepetime ekle", "en ucuzunu sepetime at", "bunu al", "sepete at")
+   - REMOVE: Ürün çıkar ("sepetten çıkar", "kaldır")
+   - CLEAR: Sepeti temizle ("sepetimi temizle", "hepsini sil", "sepeti boşalt")
+3. GEÇMİŞ BAĞLAMI KULLANIMI: Eğer sohbet geçmişinde belirli bir ürün aratılmış veya detayına bakılmışsa ve kullanıcı hemen ardından "onu sepetime ekle" diyorsa, geçmişteki ürün adını `product_query` alanına yerleştir. Eğer hiçbir isim bulunamazsa `product_query` alanını boş bırak.
+4. ÇIKTI FORMATI (SADECE JSON):
 {
   "action": "GET|ADD|REMOVE|CLEAR",
-  "product_query": "arama terimi (ADD için)",
+  "product_query": "arama terimi veya ürün adı (sadece ADD için)",
   "quantity": 1,
-  "find_cheapest": true/false (ADD için "en ucuz" denmişse true)
+  "find_cheapest": true/false (Eğer kullanıcı 'en ucuzunu' dediyse true, aksi halde false)
 }
 
-ÖNEMLİ: Eğer sohbet geçmişinde daha önce gösterilen bir ürünün adı geçiyorsa (ör. kullanıcı önce
-ürün araması yaptı, sonra "onu sepetime ekle" dedi), geçmişteki ürün adını product_query'ye yaz.
-
-SADECE JSON döndür."""
+ÖNEMLİ: Sonuç MUTLAKA VE SADECE geçerli bir JSON objesi olmalıdır. Ekstra metin veya ```json gibi markdown etiketleri KESİNLİKLE KULLANMA."""
 
 
 async def parse_cart_intent(messages: list[BaseMessage]) -> dict:
