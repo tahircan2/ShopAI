@@ -15,8 +15,8 @@ services:
     environment:
       MYSQL_DATABASE: shopai
       MYSQL_USER: shopai_user
-      MYSQL_PASSWORD: ${DB_PASSWORD:-Tahir682!}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-Tahir682!}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?set DB_ROOT_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
@@ -90,7 +90,7 @@ services:
       - DB_HOST=db
       - DB_PORT=3306
       - DB_USERNAME=shopai_user
-      - DB_PASSWORD=${DB_PASSWORD:-Tahir682!}
+      - DB_PASSWORD=${DB_PASSWORD:?set DB_PASSWORD}
       - TYPESENSE_HOST=typesense
       - AI_SERVICE_URL=http://ai-service:8000
       - APP_FRONTEND_URL=http://localhost
